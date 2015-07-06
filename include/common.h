@@ -15,13 +15,50 @@
 using namespace std;
 using namespace Eigen;
 
-#define rad2deg(r) (180*(r)/M_PI)
-#define deg2rad(d) (M_PI*(d)/180)
+#define rad2deg2(r) (180*(r)/M_PI)
+//#define deg2rad(d) (M_PI*(d)/180)
 
 #include <dirent.h>
 #include <vector>
 #include <algorithm>    // std::any_of
 //#include <array>        // std::array
+
+
+#include <sophus/so3.hpp>
+#include <random>
+
+static std::mt19937 generator;
+
+static Isometry3d addNoise(const Isometry3d& pose, double sigma, double sigmat){
+    double mean = 0.0;
+    double std  = 1.0;
+    std::normal_distribution<double> normal(mean, std);
+
+    Vector3d w(normal(generator), normal(generator), normal(generator));
+    w*=sigma;
+//    cout<<"w: "<<w.transpose()<<endl;
+    auto foo = Sophus::SO3d::exp(w);
+
+//    cout<<"mat: "<<endl<<foo.matrix()<<endl;
+
+    Isometry3d noisyPose(pose*foo.unit_quaternion());
+
+    Vector3d t(normal(generator), normal(generator), normal(generator));
+    t*=sigmat;
+
+//    cout<<"t: "<<t.transpose()<<endl;
+
+    noisyPose.translation() +=t;
+
+//    noisyPose.linear() = foo.matrix() * noisyPose.linear();
+
+    return noisyPose;
+
+//    Sophus::SO3::exp();
+
+//    w=sigmaC*randn(3,1);
+
+}
 
 static bool isPrefixAndSuffix(const char* file, uint16_t filename_length, string prefix, string suffix){
 
@@ -222,13 +259,19 @@ static std::string poseDiff(Isometry3d P1, Isometry3d P2){
     double val = 2*d*d - 1;
     if(val< -1) val = -1;
     if(val> 1) val = 1;
-    double diff_rot_degrees = rad2deg(acos(val));
+    double diff_rot_degrees = rad2deg2(acos(val));
 
 
     stringstream ss;
     ss<<"diff_tra:"<<diff_tra<<" diff_rot_degrees:"<<diff_rot_degrees<<endl;
 
     return ss.str();
+}
+
+static Vector3d getCentroid(vector<Vector3d>& pts){
+    Matrix3Xd m = vec2mat(pts);
+    Vector3d mean1=m.rowwise().mean();
+    return mean1;
 }
 
 #endif // COMMON_H
