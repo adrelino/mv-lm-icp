@@ -14,11 +14,14 @@
 #include "common.h"
 #include "gflags/gflags.h"
 #include "CPUTimer.h"
-#include "algorithms.h"
+
+#include "icp-closedform.h"
+#include "icp-g2o.h"
+#include "icp-ceres.h"
 
 using namespace std;
 
-DEFINE_bool(pointToPlane, false, "pointToPlane");
+DEFINE_bool(pointToPlane, true, "pointToPlane");
 
 int main(int argc, char * argv[]){
     gflags::ParseCommandLineFlags(&argc, &argv, true);
@@ -62,29 +65,29 @@ int main(int argc, char * argv[]){
         Matrix3Xd norTra = P.linear() * norMat;
         vector<Vector3d> norTraVec = mat2vec(norTra);
         timer.tic();
-        Ptest = ICP::pointToPlane(pts,ptsTraVec,norTraVec);
+        Ptest = ICP_Closedform::pointToPlane(pts,ptsTraVec,norTraVec);
         timer.toc("closed plane");
         timer.tic();
-        PtestG2O = ICPG2O::pointToPlane(pts,ptsTraVec,norTraVec);
+        PtestG2O = ICP_G2O::pointToPlane(pts,ptsTraVec,norTraVec);
         timer.toc("g2o plane");
         timer.tic();
-        PtestCeres = ICPCeres::pointToPlane(pts,ptsTraVec,norTraVec);
+        PtestCeres = ICP_Ceres::pointToPlane(pts,ptsTraVec,norTraVec);
         timer.toc("ceres plane CeresAngleAxis");
         timer.tic();
-        PtestCeres2 = ICPCeres::pointToPlane_EigenQuaternion(pts,ptsTraVec,norTraVec);
+        PtestCeres2 = ICP_Ceres::pointToPlane_EigenQuaternion(pts,ptsTraVec,norTraVec);
         timer.toc("ceres plane EigenQuaternion");
     }else{
         timer.tic();
-        Ptest = ICP::pointToPoint(pts,ptsTraVec);
+        Ptest = ICP_Closedform::pointToPoint(pts,ptsTraVec);
         timer.toc("closed");
         timer.tic();
-        PtestG2O = ICPG2O::pointToPoint(pts,ptsTraVec);
+        PtestG2O = ICP_G2O::pointToPoint(pts,ptsTraVec);
         timer.toc("g2o");
         timer.tic();
-        PtestCeres = ICPCeres::pointToPoint_CeresAngleAxis(pts,ptsTraVec);
+        PtestCeres = ICP_Ceres::pointToPoint_CeresAngleAxis(pts,ptsTraVec);
         timer.toc("ceres CeresAngleAxis");
         timer.tic();
-        PtestCeres2 = ICPCeres::pointToPoint_EigenQuaternion(pts,ptsTraVec);
+        PtestCeres2 = ICP_Ceres::pointToPoint_EigenQuaternion(pts,ptsTraVec);
         timer.toc("ceres EigenQuaternion");
     }
 

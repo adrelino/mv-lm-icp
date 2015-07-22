@@ -2,27 +2,34 @@
 #include "common.h"
 #include "gflags/gflags.h"
 #include "CPUTimer.h"
-#include "algorithms.h"
 #include "frame.h"
-#include "approachcomponents.h"
+
+#include "icp-g2o.h"
+#include "icp-ceres.h"
 
 using namespace std;
 
-DEFINE_bool(pointToPlane, false, "use point to plane distance metric");
+DEFINE_bool(pointToPlane, true, "use point to plane distance metric");
+DEFINE_bool(angleAxis, false, "");
+
 
 DEFINE_bool(g2o, false, "use g2o");
-DEFINE_double(cutoff,0.1,"cutoff distance for correspondences"); //dmax
+DEFINE_double(cutoff,0.05,"cutoff distance for correspondences"); //dmax
 DEFINE_int32(knn,2,"knn"); //dmax
 
 //DEFINE_string(dir,"../samples/dinosaur","dir");
 DEFINE_string(dir,"../samples/Bunny_RealData","dir");
 
-DEFINE_double(sigma,0.001,"rotation variance");
-DEFINE_double(sigmat,0.001,"translation variance");
+DEFINE_double(sigma,0.02,"rotation variance");
+DEFINE_double(sigmat,0.01,"translation variance");
 
 DEFINE_bool(fake,false,"fake");
-DEFINE_int32(limit,5,"limit");
-DEFINE_int32(step,1,"step");
+DEFINE_int32(limit,40,"limit");
+DEFINE_int32(step,2,"step");
+
+DEFINE_bool(recomputeNormals,true,"");
+
+DEFINE_bool(robust,true,"robust loss function");
 
 //Vector3d centroid;
 
@@ -41,6 +48,9 @@ static void loadFrames(vector< std::shared_ptr<Frame> >& frames, std::string dir
         int j=i;
         if(FLAGS_fake) j=0;
         loadXYZ(clouds[j],f->pts,f->nor);
+        if(FLAGS_recomputeNormals){
+            f->recomputeNormals();
+        }
 
 
 
@@ -71,6 +81,34 @@ static void loadFrames(vector< std::shared_ptr<Frame> >& frames, std::string dir
         frames.push_back(f);
     }
 }
+
+namespace ApproachComponents{
+
+static void computePoseNeighbours(vector< std::shared_ptr<Frame> >& frames, int knn){
+    //compute closest points
+    MatrixXi adjacencyMatrix=MatrixXi::Zero(frames.size(),frames.size());
+    for(int src_id=0; src_id<frames.size(); src_id++){
+        Frame& srcCloud = *frames[src_id];
+        srcCloud.computePoseNeighboursKnn(&frames,src_id,knn);
+        for(int j=0; j< srcCloud.neighbours.size(); j++){
+            adjacencyMatrix(src_id,srcCloud.neighbours[j].neighbourIdx)=1;
+        }
+//        srcCloud.computeClosestPointsToNeighbours(&frames,cutoff);
+    }
+    cout<<"graph adjacency matrix == block structure"<<endl;
+    cout<<adjacencyMatrix<<endl;
+}
+
+static void computeClosestPoints(vector< std::shared_ptr<Frame> >& frames, float cutoff){
+    //compute closest points
+    for(int src_id=0; src_id<frames.size(); src_id++){
+        Frame& srcCloud = *frames[src_id];
+//        srcCloud.computePoseNeighboursKnn(&frames,src_id,knn);
+        cout<<"cloud "<<src_id<<endl;
+        srcCloud.computeClosestPointsToNeighbours(&frames,cutoff);
+    }
+}
+}//end ns
 
 int main(int argc, char * argv[]){
 
@@ -106,16 +144,17 @@ int main(int argc, char * argv[]){
 
 //        //ApproachComponents::computeClosestPointsFake(frames,cutoffGlobal,knn);
 
+    frames[0]->fixed=true;
     ApproachComponents::computePoseNeighbours(frames,FLAGS_knn);
 
     Visualize::spin();
 
 
-    Visualize::getInstance()->selectedFrame=0;
-    Visualize::getInstance()->selectedOutgoingEdgeIdx=0;
+//    Visualize::getInstance()->selectedFrame=1;
+//    Visualize::getInstance()->selectedOutgoingEdgeIdx=0;
 
 
-        for(int i=0; i<50; i++){
+        for(int i=0; i<20; i++){
 
             timer.tic();
             ApproachComponents::computeClosestPoints(frames,FLAGS_cutoff);
@@ -125,9 +164,10 @@ int main(int argc, char * argv[]){
 
             timer.tic();
             if(!FLAGS_g2o){
-                ApproachComponents::ceresOptimizer(frames, FLAGS_pointToPlane);
+                if(FLAGS_angleAxis) ICP_Ceres::ceresOptimizer_ceresAngleAxis(frames,FLAGS_pointToPlane,FLAGS_robust);
+                else ICP_Ceres::ceresOptimizer(frames, FLAGS_pointToPlane,FLAGS_robust);
             }else{
-                ApproachComponents::g2oOptimizer(frames, FLAGS_pointToPlane);
+                ICP_G2O::g2oOptimizer(frames, FLAGS_pointToPlane);
             }
 
 //            //ApproachComponents::g2oOptimizer(frames);

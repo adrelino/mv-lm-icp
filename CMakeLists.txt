@@ -28,7 +28,7 @@ SET(EIGEN_INCLUDE_DIR "/usr/local/include/eigen3/")
 
 FIND_PACKAGE(Ceres REQUIRED)
 set(G2O_LIBRARIES
-    g2o_core g2o_stuff g2o_types_slam3d g2o_types_icp g2o_solver_csparse g2o_csparse_extension
+    g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d #g2o_solver_csparse g2o_csparse_extension
 )
 
 include_directories(include/)
@@ -38,11 +38,11 @@ file(GLOB HEADERS
     include/*.hpp
 )
 
-#file(GLOB SOURCES src/*.cpp)
-set(SOURCES
-    src/algorithms.cpp
-    src/CPUTimer.cpp
-)
+file(GLOB SOURCES src/internal/*.cpp)
+#set(SOURCES
+#    src/algorithms.cpp
+#    src/CPUTimer.cpp
+#)
 
 # define additional include directories and linking targets
 INCLUDE_DIRECTORIES("ext/glfw-3.1.1/include" ${EIGEN_INCLUDE_DIR})
@@ -50,16 +50,16 @@ INCLUDE_DIRECTORIES("ext/glfw-3.1.1/include" ${EIGEN_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CERES_INCLUDE_DIRS})
 
 
-set(SOURCES2
-    ${SOURCES}
-    src/frame.cpp
-    src/Visualize.cpp
-    src/algorithms.cpp
-    src/CPUTimer.cpp
-    src/approachcomponents.cpp
-)
+#set(SOURCES2
+#    ${SOURCES}
+#    src/frame.cpp
+#    src/Visualize.cpp
+#    src/algorithms.cpp
+#    src/CPUTimer.cpp
+#    src/approachcomponents.cpp
+#)
 ## define executable
-ADD_EXECUTABLE(multiview src/main_multiview.cpp ${HEADERS} ${SOURCES2})
+ADD_EXECUTABLE(multiview src/main_multiview.cpp ${HEADERS} ${SOURCES})
 TARGET_LINK_LIBRARIES(multiview glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} ${CERES_LIBRARIES})
 
 ADD_EXECUTABLE(pairwise src/main_pairwise.cpp ${HEADERS} ${SOURCES})

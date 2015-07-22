@@ -217,6 +217,7 @@ static void loadXYZ(const std::string filename, vector<Vector3d>& pts, vector<Ve
         cerr << filename << " could not be opened" << endl;
     }
 
+    int i=0;
     while(file){
         Vector3d pt,no;
         file >> pt.x() >> pt.y() >> pt.z() >> no.x() >> no.y() >> no.z();
@@ -272,6 +273,64 @@ static Vector3d getCentroid(vector<Vector3d>& pts){
     Matrix3Xd m = vec2mat(pts);
     Vector3d mean1=m.rowwise().mean();
     return mean1;
+}
+
+static void summary(std::vector<double> v){  //Like R's summary
+    double sum = std::accumulate(v.begin(), v.end(), 0.0);
+    double mean = sum / v.size();
+
+    double sq_sum = std::inner_product(v.begin(), v.end(), v.begin(), 0.0);
+    double std = std::sqrt(sq_sum / v.size() - mean * mean);
+
+    std::sort(v.begin(),v.end());
+    double min=v[0];
+    double firstQuantile=v[v.size()*0.25];
+    double median=v[v.size()*0.5];
+    double thirdQuantile=v[v.size()*0.75];
+    double max=v[v.size()-1];
+
+    cout<<"Summary of "<<v.size()<<" bucket sizes:"<<endl;
+    cout<<"Min\t.25\tMed\tMean\t.75\tMax \tStd"<<endl;
+    cout<<min<<" \t"<<firstQuantile<<" \t"<<median<<" \t"<<round(mean*100)*0.01<<" \t"<<thirdQuantile<<" \t"<<max<<" \t"<<round(std*100)*0.01<<endl;
+
+
+
+
+
+    /*std::vector<double> diff(v.size());
+    std::transform(v.begin(), v.end(), diff.begin(),
+                   std::bind2nd(std::minus<double>(), mean));
+    double sq_sum = std::inner_product(diff.begin(), diff.end(), diff.begin(), 0.0);
+    double stdev = std::sqrt(sq_sum / v.size());
+
+
+    double sum = std::accumulate(std::begin(v), std::end(v), 0.0);
+    double m =  sum / v.size();
+
+    double accum = 0.0;
+    std::for_each (std::begin(v), std::end(v), [&](const double d) {
+        accum += (d - m) * (d - m);
+    });
+
+    double stdev = sqrt(accum / (v.size()-1));*/
+
+}
+
+static void pointSetPCA(const vector<Vector3d>& pts, Vector3d& centroid, Vector3d& normal, double& curvature){
+
+    assert(pts.size()>=3); //otherwise normals are undetermined
+    Map<const Matrix3Xd> P(&pts[0].x(),3,pts.size());
+
+    centroid = P.rowwise().mean();
+    MatrixXd centered = P.colwise() - centroid;
+    Matrix3d cov = centered * centered.transpose();
+
+    //eigvecs sorted in increasing order of eigvals
+    SelfAdjointEigenSolver<Matrix3d> eig(cov);
+    normal = eig.eigenvectors().col(0); //is already normalized
+    if (normal(2) > 0) normal = -normal; //flip towards camera
+    Vector3d eigVals = eig.eigenvalues();
+    curvature = eigVals(0) / eigVals.sum();
 }
 
 #endif // COMMON_H

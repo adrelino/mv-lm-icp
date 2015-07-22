@@ -1,9 +1,11 @@
-#ifndef ALGORITHMS_H
-#define ALGORITHMS_H
+#ifndef ICPCERES
+#define ICPCERES
 
 #include <Eigen/Dense>
 #include <Eigen/Geometry>
 #include <vector>
+
+#include "frame.h"
 
 #include <ceres/local_parameterization.h>
 #include <ceres/autodiff_local_parameterization.h>
@@ -16,22 +18,24 @@
 using namespace Eigen;
 using namespace std;
 
-namespace ICP {
-    Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor);
-    Isometry3d pointToPoint(vector<Vector3d> &src,vector<Vector3d> &dst);
+namespace ICP_Ceres {
+
+template <typename T>
+ceres::MatrixAdapter<T, 1, 4> ColumnMajorAdapter4x3(T* pointer) {
+  return ceres::MatrixAdapter<T, 1, 4>(pointer);
 }
 
-namespace ICPG2O {
-    Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor);
-    Isometry3d pointToPoint(vector<Vector3d> &src,vector<Vector3d> &dst);
-}
-
-namespace ICPCeres {
+    //pairwise
     Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor);
     Isometry3d pointToPlane_EigenQuaternion(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor);
 
     Isometry3d pointToPoint_EigenQuaternion(vector<Vector3d> &src,vector<Vector3d> &dst);
     Isometry3d pointToPoint_CeresAngleAxis(vector<Vector3d> &src,vector<Vector3d> &dst);
+
+    //multiview
+    void ceresOptimizer(std::vector< std::shared_ptr<Frame> >& frames, bool pointToPlane, bool robust);
+    void ceresOptimizer_ceresAngleAxis(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane, bool robust);
+
 }
 
 namespace ICPCostFunctions{
@@ -92,6 +96,7 @@ struct PointToPlaneErrorGlobal{
     PointToPlaneErrorGlobal(const Eigen::Vector3d& dst, const Eigen::Vector3d& src, const Eigen::Vector3d& nor) :
     p_dst(dst), p_src(src), p_nor(nor)
     {
+//        cout<<nor.dot(nor)<<endl;
     }
 
     // Factory to hide the construction of the CostFunction object from the client code.
@@ -118,12 +123,105 @@ struct PointToPlaneErrorGlobal{
         // Rotate the point using Eigen rotations
         Eigen::Matrix<T,3,1> p = q * src;
         p += t;
-        Eigen::Matrix<T,3,1> p2 = qDst * dst;
+        Eigen::Matrix<T,3,1> p2 = qDst.toRotationMatrix() * dst;
         p2 += tDst;
-        Eigen::Matrix<T,3,1> n2 = qDst * nor; //no translation on normal
+        Eigen::Matrix<T,3,1> n2 = qDst.toRotationMatrix() * nor; //no translation on normal
 
         // The error is the difference between the predicted and observed position projected onto normal
         residuals[0] = (p - p2).dot(n2);
+
+        return true;
+    }
+};
+
+struct PointToPointErrorGlobal_CeresAngleAxis{
+
+    const Eigen::Vector3d& p_dst;
+    const Eigen::Vector3d& p_src;
+
+    PointToPointErrorGlobal_CeresAngleAxis(const Eigen::Vector3d &dst, const Eigen::Vector3d &src) :
+        p_dst(dst), p_src(src)
+    {
+    }
+
+    // Factory to hide the construction of the CostFunction object from the client code.
+    static ceres::CostFunction* Create(const Eigen::Vector3d &observed, const Eigen::Vector3d &worldPoint) {
+        return (new ceres::AutoDiffCostFunction<PointToPointErrorGlobal_CeresAngleAxis, 3, 6, 6>(new PointToPointErrorGlobal_CeresAngleAxis(observed, worldPoint)));
+    }
+
+    template <typename T>
+    bool operator()(const T* const camera, const T* const camera2, T* residuals) const {
+
+        T p[3] = {T(p_src[0]), T(p_src[1]), T(p_src[2])};
+        ceres::AngleAxisRotatePoint(camera,p,p);
+
+        T p2[3] = {T(p_dst[0]), T(p_dst[1]), T(p_dst[2])};
+        ceres::AngleAxisRotatePoint(camera2,p2,p2);
+
+        // camera[3,4,5] are the translation.
+        p[0] += camera[3];
+        p[1] += camera[4];
+        p[2] += camera[5];
+
+        p2[0] += camera2[3];
+        p2[1] += camera2[4];
+        p2[2] += camera2[5];
+
+        // The error is the difference between the predicted and observed position.
+        residuals[0] = p[0] - p2[0];
+        residuals[1] = p[1] - p2[1];
+        residuals[2] = p[2] - p2[2];
+
+        return true;
+    }
+};
+
+struct PointToPlaneErrorGlobal_CeresAngleAxis{
+
+    const Eigen::Vector3d& p_dst;
+    const Eigen::Vector3d& p_src;
+    const Eigen::Vector3d& p_nor;
+
+
+    PointToPlaneErrorGlobal_CeresAngleAxis(const Eigen::Vector3d& dst, const Eigen::Vector3d& src, const Eigen::Vector3d& nor) :
+    p_dst(dst), p_src(src), p_nor(nor)
+    {
+//        cout<<nor.dot(nor)<<endl;
+    }
+
+    // Factory to hide the construction of the CostFunction object from the client code.
+    static ceres::CostFunction* Create(const Eigen::Vector3d& dst, const Eigen::Vector3d& src, const Eigen::Vector3d& nor) {
+        return (new ceres::AutoDiffCostFunction<PointToPlaneErrorGlobal_CeresAngleAxis, 1, 6, 6>(new PointToPlaneErrorGlobal_CeresAngleAxis(dst, src, nor)));
+    }
+
+    template <typename T>
+    bool operator()(const T* const cam1, const T* const cam2, T* residuals) const {
+
+        T p1[3] = {T(p_src[0]), T(p_src[1]), T(p_src[2])};
+        ceres::AngleAxisRotatePoint(cam1,p1,p1);
+
+        T p2[3] = {T(p_dst[0]), T(p_dst[1]), T(p_dst[2])};
+        ceres::AngleAxisRotatePoint(cam2,p2,p2);
+
+        T nor[3] = {T(p_nor[0]), T(p_nor[1]), T(p_nor[2])};
+        ceres::AngleAxisRotatePoint(cam2,nor,nor);
+
+        // camera[3,4,5] are the translation.
+        p1[0] += cam1[3];
+        p1[1] += cam1[4];
+        p1[2] += cam1[5];
+
+        p2[0] += cam2[3];
+        p2[1] += cam2[4];
+        p2[2] += cam2[5];
+
+        //no translation on normal
+
+        // The error is the difference between the predicted and observed position projected onto normal
+        residuals[0] = (p1[0] - p2[0]) * nor[0] + \
+                       (p1[1] - p2[1]) * nor[1] + \
+                       (p1[2] - p2[2]) * nor[2];
+
 
         return true;
     }
@@ -291,4 +389,4 @@ struct PointToPlaneError_EigenQuaternion{
 };
 
 }
-#endif // ALGORITHMS_H
+#endif // ICPCERES

@@ -234,15 +234,16 @@ void Visualize::drawFrame(Frame* m, int i){
 
 
 //        if(keyToggle['c'] || selectedFrame==i || ingoingEdgeFrame==i){
-//            glPushMatrix();
-//                glMultMatrixd(m->pose.matrix().data());
+        glColor3dv(color.data());
+        m->draw();
+        glPushMatrix();
+                glMultMatrixd(m->pose.matrix().data());
 //                if(keyToggle['d']){ //downsampled
-                    glColor3dv(color.data());
-                    m->draw();
+
 //                    drawPoints(m->pts,color);
-//                    if(keyToggle['n']) drawNormals(m,colorNormals);
+                    if(keyToggle['n']) drawNormals(m,colorNormals);
 //                }
-//            glPopMatrix();
+            glPopMatrix();
 //        }
 
     //correct

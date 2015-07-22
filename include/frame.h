@@ -19,10 +19,16 @@
 using namespace Eigen;
 using namespace std;
 
+struct Correspondance{
+    int first;
+    int second;
+    double dist;
+};
+
 struct OutgoingEdge{
     int neighbourIdx;
     float weight; //==error of correspondances
-    vector< std::pair<int,int> > correspondances;  //src dst in camera coordinate frame
+    vector<Correspondance> correspondances;  //srcIdx, dstIdx, dist
     Isometry3f P_relative;
 };
 
@@ -42,6 +48,10 @@ public:
     Isometry3d poseGroundTruth = Isometry3d::Identity();
 
     vector<OutgoingEdge> neighbours;
+
+    vector<Vector3d> getNeighbours(int queryIdx, size_t num_results);
+    void recomputeNormals();
+
 
     void draw();
 
