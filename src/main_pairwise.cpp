@@ -1,3 +1,16 @@
+/** @author Adrian Haarbach
+ *
+ * Comparison of pairwise ICP.
+ * variants:
+ * - point to point
+ * - point to plane
+ * minimizers:
+ * - closed form solution/1st order approximation
+ * - g2o with SO3 vertices and GICP edges
+ * - ceres with angle axis
+ * - ceres with eigen quaternion
+ */
+
 #include "common.h"
 #include "gflags/gflags.h"
 #include "CPUTimer.h"
@@ -5,9 +18,10 @@
 
 using namespace std;
 
-DEFINE_bool(pointToPlane, false, "use point to plane distance metric");
+DEFINE_bool(pointToPlane, false, "pointToPlane");
 
 int main(int argc, char * argv[]){
+    gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     vector<Vector3d> pts,nor;
     loadXYZ("../samples/scene.xyz",pts,nor);
@@ -75,7 +89,7 @@ int main(int argc, char * argv[]){
     }
 
 
-    //cout<<"groundtruth:"<<endl<<P.matrix()<<endl;
+    cout<<"groundtruth:"<<endl<<P.matrix()<<endl;
     cout<<"closed-form:"<<endl<<Ptest.matrix()<<endl;
     cout<<"closed: "<<poseDiff(P,Ptest)<<endl;
 
@@ -89,7 +103,4 @@ int main(int argc, char * argv[]){
     cout<<"ceres eigen quaternion "<<poseDiff(P,PtestCeres2)<<endl;
 
     timer.printAllTimings();
-//    }
-
-
 }

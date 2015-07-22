@@ -18,10 +18,11 @@ DEFINE_int32(knn,2,"knn"); //dmax
 DEFINE_string(dir,"../samples/Bunny_RealData","dir");
 
 DEFINE_double(sigma,0.001,"rotation variance");
-DEFINE_double(sigmat,0.00,"translation variance");
+DEFINE_double(sigmat,0.001,"translation variance");
 
 DEFINE_bool(fake,false,"fake");
 DEFINE_int32(limit,5,"limit");
+DEFINE_int32(step,1,"step");
 
 //Vector3d centroid;
 
@@ -35,7 +36,7 @@ static void loadFrames(vector< std::shared_ptr<Frame> >& frames, std::string dir
     }
 
 
-    for (int i = 0; i < clouds.size() && i<FLAGS_limit; ++i) {
+   for (int i = 0; i < clouds.size() && i<FLAGS_limit*FLAGS_step; i+=FLAGS_step) {
         shared_ptr<Frame> f(new Frame());
         int j=i;
         if(FLAGS_fake) j=0;

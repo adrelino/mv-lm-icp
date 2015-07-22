@@ -1,12 +1,6 @@
 #include "frame.h"
 #include "algorithms.h"
 
-//Frame::Frame(const std::string filename)
-//{
-//    pts=loadPLY(filename);
-//    upload();
-//}
-
 Frame::Frame() : uploaded(false), fixed(false), indexComputed(false) {
 
 }
