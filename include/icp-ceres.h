@@ -11,9 +11,10 @@
 #include <ceres/autodiff_local_parameterization.h>
 #include <ceres/autodiff_cost_function.h>
 #include <ceres/types.h>
-#include <ceres/rotation.h>
 
+#include <ceres/rotation.h>
 #include "eigen_quaternion.h"
+#include "sophus_se3.h"
 
 using namespace Eigen;
 using namespace std;
@@ -35,6 +36,8 @@ ceres::MatrixAdapter<T, 1, 4> ColumnMajorAdapter4x3(T* pointer) {
     //multiview
     void ceresOptimizer(std::vector< std::shared_ptr<Frame> >& frames, bool pointToPlane, bool robust);
     void ceresOptimizer_ceresAngleAxis(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane, bool robust);
+    void ceresOptimizer_sophusSE3(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane, bool robust, bool automaticDiffLocalParam=true);
+
 
 }
 
@@ -226,6 +229,91 @@ struct PointToPlaneErrorGlobal_CeresAngleAxis{
         return true;
     }
 };
+
+struct PointToPointErrorGlobal_SophusSE3{
+
+    const Eigen::Vector3d p_dst;
+    const Eigen::Vector3d p_src;
+
+    PointToPointErrorGlobal_SophusSE3(const Eigen::Vector3d &dst, const Eigen::Vector3d &src) :
+        p_dst(dst), p_src(src)
+    {
+
+    }
+
+    // Factory to hide the construction of the CostFunction object from the client code.
+    static ceres::CostFunction* Create(const Eigen::Vector3d& dst, const Eigen::Vector3d& src) {
+        return (new ceres::AutoDiffCostFunction<PointToPointErrorGlobal_SophusSE3, 3, Sophus::SE3d::num_parameters, Sophus::SE3d::num_parameters>(new PointToPointErrorGlobal_SophusSE3(dst, src)));
+    }
+
+    template <typename T>
+    bool operator()(const T* const cam1, const T* const cam2, T* residuals) const {
+
+        // Make sure the Eigen::Vector world point is using the ceres::Jet type as it's Scalar type
+        Eigen::Matrix<T,3,1> src; src << T(p_src[0]), T(p_src[1]), T(p_src[2]);
+        Eigen::Matrix<T,3,1> dst; dst << T(p_dst[0]), T(p_dst[1]), T(p_dst[2]);
+
+        // Map the T* array to an Sophus SE3 object (with appropriate Scalar type)
+        Sophus::SE3Group<T> q = Eigen::Map< const Sophus::SE3Group<T> >(cam1);
+        Sophus::SE3Group<T> q2 = Eigen::Map< const Sophus::SE3Group<T> >(cam2);
+
+        // Rotate the point using Eigen rotations
+        Eigen::Matrix<T,3,1> p = q.unit_quaternion() * src + q.translation();
+        Eigen::Matrix<T,3,1> p2 = q2.unit_quaternion() * dst + q2.translation();
+
+        // The error is the difference between the predicted and observed position.
+        residuals[0] = p[0] - p2[0];
+        residuals[1] = p[1] - p2[1];
+        residuals[2] = p[2] - p2[2];
+
+        return true;
+    }
+};
+
+struct PointToPlaneErrorGlobal_SophusSE3{
+
+    const Eigen::Vector3d& p_dst;
+    const Eigen::Vector3d& p_src;
+    const Eigen::Vector3d& p_nor;
+
+
+    PointToPlaneErrorGlobal_SophusSE3(const Eigen::Vector3d& dst, const Eigen::Vector3d& src, const Eigen::Vector3d& nor) :
+    p_dst(dst), p_src(src), p_nor(nor)
+    {
+//        cout<<nor.dot(nor)<<endl;
+    }
+
+    // Factory to hide the construction of the CostFunction object from the client code.
+    static ceres::CostFunction* Create(const Eigen::Vector3d& dst, const Eigen::Vector3d& src, const Eigen::Vector3d& nor) {
+        return (new ceres::AutoDiffCostFunction<PointToPlaneErrorGlobal_SophusSE3, 1, Sophus::SE3d::num_parameters, Sophus::SE3d::num_parameters>(new PointToPlaneErrorGlobal_SophusSE3(dst, src, nor)));
+    }
+
+    template <typename T>
+    bool operator()(const T* const cam1, const T* const cam2, T* residuals) const {
+
+        // Make sure the Eigen::Vector world point is using the ceres::Jet type as it's Scalar type
+        Eigen::Matrix<T,3,1> src; src << T(p_src[0]), T(p_src[1]), T(p_src[2]);
+        Eigen::Matrix<T,3,1> dst; dst << T(p_dst[0]), T(p_dst[1]), T(p_dst[2]);
+        Eigen::Matrix<T,3,1> nor; nor << T(p_nor[0]), T(p_nor[1]), T(p_nor[2]);
+
+        // Map the T* array to an Sophus SE3 object (with appropriate Scalar type)
+        Sophus::SE3Group<T> q = Eigen::Map< const Sophus::SE3Group<T> >(cam1);
+        Sophus::SE3Group<T> q2 = Eigen::Map< const Sophus::SE3Group<T> >(cam2);
+
+        // Rotate the point using Eigen rotations
+        Eigen::Matrix<T,3,1> p = q.unit_quaternion() * src + q.translation();
+        Eigen::Matrix<T,3,1> p2 = q2.unit_quaternion() * dst + q2.translation();
+        Eigen::Matrix<T,3,1> n2 = q2.unit_quaternion() * nor; //no translation on normal
+
+        // The error is the difference between the predicted and observed position projected onto normal
+        residuals[0] = (p - p2).dot(n2);
+
+        return true;
+    }
+};
+
+
+
 
 struct PointToPointError_EigenQuaternion{
     const Eigen::Vector3d& p_dst;

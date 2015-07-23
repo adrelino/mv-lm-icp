@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Visualize.h"
+//#include "Visualize.h"
 
 
 #include <ceres/local_parameterization.h>
@@ -100,6 +100,18 @@ Isometry3d eigenQuaternionToIso(const Eigen::Quaterniond& q, const Vector3d& t){
     poseFinal.linear() = q.toRotationMatrix();
     poseFinal.translation() = t;
     return poseFinal;//.cast<float>();
+}
+
+Sophus::SE3d isoToSophus(const Isometry3d& pose){
+    return Sophus::SE3d(pose);
+}
+
+Isometry3d sophusToIso(Sophus::SE3d soph){
+    //    return Isometry3d(soph.matrix());
+    Isometry3d poseFinal = Isometry3d::Identity();
+    poseFinal.linear() = soph.rotationMatrix();
+    poseFinal.translation() = soph.translation();
+    return poseFinal;
 }
 
 
@@ -353,6 +365,84 @@ void ceresOptimizer_ceresAngleAxis(vector< std::shared_ptr<Frame> >& frames, boo
     //update camera poses
     for (int i = 0; i < frames.size(); ++i) {
         frames[i]->pose=axisAngleToIso(&cameras[i*6]);
+    }
+}
+
+
+void ceresOptimizer_sophusSE3(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane,bool robust,bool automaticDiff){
+
+    ceres::Problem problem;
+
+    std::vector<Sophus::SE3d> cameras;
+
+    //extract initial camera poses
+    for(int i=0; i<frames.size(); i++){
+      Sophus::SE3d soph = isoToSophus(frames[i]->pose);
+
+//      cout<<"pose "<<i<<endl;
+//      cout<<frames[i]->pose.matrix()<<endl;
+//      cout<<"pose test "<<i<<endl;
+//      cout<<sophusToIso(soph).matrix()<<endl;
+
+//      Visualize::spin();
+      cameras.push_back(soph);
+
+
+      if (i==0){
+          frames[i]->fixed=true;
+      }
+    }
+
+    //add edges
+    for(int src_id=0; src_id<frames.size(); src_id++){
+
+        Frame& srcCloud = *frames[src_id];
+        if(srcCloud.fixed) continue;
+
+        for (int j = 0; j < srcCloud.neighbours.size(); ++j) {
+
+            OutgoingEdge& dstEdge = srcCloud.neighbours[j];
+            Frame& dstCloud = *frames.at(dstEdge.neighbourIdx);
+
+            int dst_id=dstEdge.neighbourIdx;
+
+            for(auto corr : dstEdge.correspondances){
+
+                // first viewpoint : dstcloud, fixed
+                // second viewpoint: srcCloud, moves
+
+                ceres::CostFunction* cost_function;
+
+                if(pointToPlane){
+                    cost_function = ICPCostFunctions::PointToPlaneErrorGlobal_SophusSE3::Create(dstCloud.pts[corr.second],srcCloud.pts[corr.first],dstCloud.nor[corr.second]);
+                }else{
+                    cost_function = ICPCostFunctions::PointToPointErrorGlobal_SophusSE3::Create(dstCloud.pts[corr.second],srcCloud.pts[corr.first]);
+                }
+
+                ceres::LossFunction* loss = NULL;
+                if(robust) loss = new ceres::SoftLOneLoss(dstEdge.weight);
+
+                problem.AddResidualBlock(cost_function, loss, cameras[src_id].data(),cameras[dst_id].data());
+
+            }
+        }
+    }
+
+    ceres::LocalParameterization* param = sophus_se3::getParameterization(automaticDiff);
+
+    for (int i = 0; i < frames.size(); ++i) {
+        problem.SetParameterization(cameras[i].data(),param);
+        if(frames[i]->fixed){
+            std::cout<<i<<" fixed"<<endl;
+            problem.SetParameterBlockConstant(cameras[i].data());
+        }
+    }
+
+    solve(problem,false);
+
+    //update camera poses
+    for (int i = 0; i < frames.size(); ++i) {
+        frames[i]->pose=sophusToIso(cameras[i]);
     }
 }
 

@@ -10,6 +10,7 @@
 using namespace std;
 
 DEFINE_bool(pointToPlane, true, "use point to plane distance metric");
+DEFINE_bool(sophusSE3,true,"");
 DEFINE_bool(angleAxis, false, "");
 
 
@@ -164,7 +165,8 @@ int main(int argc, char * argv[]){
 
             timer.tic();
             if(!FLAGS_g2o){
-                if(FLAGS_angleAxis) ICP_Ceres::ceresOptimizer_ceresAngleAxis(frames,FLAGS_pointToPlane,FLAGS_robust);
+                if(FLAGS_sophusSE3) ICP_Ceres::ceresOptimizer_sophusSE3(frames,FLAGS_pointToPlane,FLAGS_robust);
+                else if(FLAGS_angleAxis) ICP_Ceres::ceresOptimizer_ceresAngleAxis(frames,FLAGS_pointToPlane,FLAGS_robust);
                 else ICP_Ceres::ceresOptimizer(frames, FLAGS_pointToPlane,FLAGS_robust);
             }else{
                 ICP_G2O::g2oOptimizer(frames, FLAGS_pointToPlane);
