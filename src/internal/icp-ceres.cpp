@@ -16,6 +16,9 @@
 
 #include <ceres/loss_function.h>
 
+#define useLocalParam;
+
+
 namespace ICP_Ceres {
 
 //http://ceres-solver.org/faqs.html#solving
@@ -25,7 +28,7 @@ ceres::Solver::Options getOptions(){
     //options.use_nonmonotonic_steps = true;
     options.preconditioner_type = ceres::IDENTITY;
     options.linear_solver_type = ceres::DENSE_QR;
-    options.max_num_iterations = 10;
+//    options.max_num_iterations = 100;
 
 //    options.use_nonmonotonic_steps = true;
 //    options.preconditioner_type = ceres::SCHUR_JACOBI;
@@ -139,8 +142,6 @@ Isometry3d pointToPoint_EigenQuaternion(vector<Vector3d>&src,vector<Vector3d>&ds
 
     ceres::Problem problem;
 
-    ceres::LocalParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
-
     for (int i = 0; i < src.size(); ++i) {
         // first viewpoint : dstcloud, fixed
         // second viewpoint: srcCloud, moves
@@ -148,14 +149,17 @@ Isometry3d pointToPoint_EigenQuaternion(vector<Vector3d>&src,vector<Vector3d>&ds
         problem.AddResidualBlock(cost_function, NULL, q.coeffs().data(), t.data());
     }
 
+#ifdef useLocalParam
+    ceres::LocalParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
     problem.SetParameterization(q.coeffs().data(),quaternion_parameterization);
+#endif
 
     solve(problem);
 
     return eigenQuaternionToIso(q,t);
 }
 
-Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor){
+Isometry3d pointToPlane_CeresAngleAxis(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor){
 
     double cam[6] = {0,0,0,0,0,0};
 
@@ -165,7 +169,7 @@ Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vecto
         // first viewpoint : dstcloud, fixed
         // second viewpoint: srcCloud, moves
         // nor is normal of dst
-        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPlaneError::Create(dst[i],src[i],nor[i]);
+        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPlaneError_CeresAngleAxis::Create(dst[i],src[i],nor[i]);
         problem.AddResidualBlock(cost_function, NULL, cam);
     }
 
@@ -180,8 +184,6 @@ Isometry3d pointToPlane_EigenQuaternion(vector<Vector3d>&src,vector<Vector3d>&ds
 
     ceres::Problem problem;
 
-    ceres::LocalParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
-
     for (int i = 0; i < src.size(); ++i) {
         // first viewpoint : dstcloud, fixed
         // second viewpoint: srcCloud, moves
@@ -189,7 +191,10 @@ Isometry3d pointToPlane_EigenQuaternion(vector<Vector3d>&src,vector<Vector3d>&ds
         problem.AddResidualBlock(cost_function, NULL, q.coeffs().data(), t.data());
     }
 
+#ifdef useLocalParam
+    ceres::LocalParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
     problem.SetParameterization(q.coeffs().data(),quaternion_parameterization);
+#endif
 
     solve(problem);
 
@@ -206,8 +211,6 @@ void ceresOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane,
     vector<Eigen::Vector3d> ts(frames.size());
 
     //extract initial camera poses
-    //ceres::LocalParameterization
-    eigen_quaternion::EigenQuaternionParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
 
     for(int i=0; i<frames.size(); i++){
       Isometry3d originalPose = frames[i]->pose;
@@ -274,9 +277,16 @@ void ceresOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane,
         }
     }
 
+#ifdef useLocalParam
+    eigen_quaternion::EigenQuaternionParameterization *quaternion_parameterization = new eigen_quaternion::EigenQuaternionParameterization;
+#endif
+
     for (int i = 0; i < frames.size(); ++i) {
+        #ifdef useLocalParam
 //        problem.SetParameterization(&cameras[i*7],quaternion_parameterization);
         problem.SetParameterization(qs[i].coeffs().data(),quaternion_parameterization);
+        #endif
+
         if(frames[i]->fixed){
             std::cout<<i<<" fixed"<<endl;
 //            problem.SetParameterBlockConstant(&cameras[i*7]);
@@ -427,11 +437,13 @@ void ceresOptimizer_sophusSE3(vector< std::shared_ptr<Frame> >& frames, bool poi
             }
         }
     }
-
+#ifdef useLocalParam
     ceres::LocalParameterization* param = sophus_se3::getParameterization(automaticDiff);
-
+#endif
     for (int i = 0; i < frames.size(); ++i) {
+        #ifdef useLocalParam
         problem.SetParameterization(cameras[i].data(),param);
+        #endif
         if(frames[i]->fixed){
             std::cout<<i<<" fixed"<<endl;
             problem.SetParameterBlockConstant(cameras[i].data());
@@ -445,6 +457,97 @@ void ceresOptimizer_sophusSE3(vector< std::shared_ptr<Frame> >& frames, bool poi
         frames[i]->pose=sophusToIso(cameras[i]);
     }
 }
+
+//Isometry3d pointToPoint_SophusSE3(vector<Vector3d> &src,vector<Vector3d> &dst){
+//    Sophus::SE3d soph = isoToSophus(Isometry3d::Identity());
+//    Sophus::SE3d soph2 = isoToSophus(Isometry3d::Identity());
+
+//    ceres::Problem problem;
+
+//    for (int i = 0; i < src.size(); ++i) {
+//        // first viewpoint : dstcloud, fixed
+//        // second viewpoint: srcCloud, moves
+//        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPointErrorGlobal_SophusSE3::Create(dst[i],src[i]);
+//        problem.AddResidualBlock(cost_function, NULL,soph.data(),soph2.data());
+//    }
+
+//    ceres::LocalParameterization* param = sophus_se3::getParameterization(false);
+
+//    problem.SetParameterization(soph.data(),param);
+//    problem.SetParameterization(soph2.data(),param);
+//    problem.SetParameterBlockConstant(soph2.data());
+
+//    solve(problem);
+
+//    return sophusToIso(soph);
+//}
+
+//Isometry3d pointToPlane_SophusSE3(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor){
+//    Sophus::SE3d soph = isoToSophus(Isometry3d::Identity());
+//    Sophus::SE3d soph2 = isoToSophus(Isometry3d::Identity());
+
+//    ceres::Problem problem;
+
+//    for (int i = 0; i < src.size(); ++i) {
+//        // first viewpoint : dstcloud, fixed
+//        // second viewpoint: srcCloud, moves
+//        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPlaneErrorGlobal_SophusSE3::Create(dst[i],src[i],nor[i]);
+//        problem.AddResidualBlock(cost_function, NULL,soph.data(),soph2.data());
+//    }
+
+//    ceres::LocalParameterization* param = sophus_se3::getParameterization(false);
+
+//    problem.SetParameterization(soph.data(),param);
+//    problem.SetParameterization(soph2.data(),param);
+//    problem.SetParameterBlockConstant(soph2.data());
+
+//    solve(problem);
+
+//    return sophusToIso(soph);
+//}
+
+Isometry3d pointToPoint_SophusSE3(vector<Vector3d> &src,vector<Vector3d> &dst,bool autodiff){
+    Sophus::SE3d soph = isoToSophus(Isometry3d::Identity());
+
+    ceres::Problem problem;
+
+    for (int i = 0; i < src.size(); ++i) {
+        // first viewpoint : dstcloud, fixed
+        // second viewpoint: srcCloud, moves
+        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPointError_SophusSE3::Create(dst[i],src[i]);
+        problem.AddResidualBlock(cost_function, NULL,soph.data());
+    }
+#ifdef useLocalParam
+    ceres::LocalParameterization* param = sophus_se3::getParameterization(autodiff);
+    problem.SetParameterization(soph.data(),param);
+#endif
+
+    solve(problem);
+
+    return sophusToIso(soph);
+}
+
+Isometry3d pointToPlane_SophusSE3(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor, bool autodiff){
+    Sophus::SE3d soph = isoToSophus(Isometry3d::Identity());
+
+    ceres::Problem problem;
+
+    for (int i = 0; i < src.size(); ++i) {
+        // first viewpoint : dstcloud, fixed
+        // second viewpoint: srcCloud, moves
+        ceres::CostFunction* cost_function = ICPCostFunctions::PointToPlaneError_SophusSE3::Create(dst[i],src[i],nor[i]);
+        problem.AddResidualBlock(cost_function, NULL,soph.data());
+    }
+#ifdef useLocalParam
+    ceres::LocalParameterization* param = sophus_se3::getParameterization(autodiff);
+    problem.SetParameterization(soph.data(),param);
+#endif
+
+    solve(problem);
+
+    return sophusToIso(soph);
+}
+
 
 
 } //end namespace

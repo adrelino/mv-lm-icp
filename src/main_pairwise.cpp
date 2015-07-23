@@ -21,13 +21,15 @@
 
 using namespace std;
 
-DEFINE_bool(pointToPlane, true, "pointToPlane");
+DEFINE_bool(pointToPlane, false, "pointToPlane");
+DEFINE_bool(sophusSE3_autodiff,false,"weather to use automatic or analytic differentiation on local parameterizaiton");
 
 int main(int argc, char * argv[]){
     gflags::ParseCommandLineFlags(&argc, &argv, true);
 
     vector<Vector3d> pts,nor;
-    loadXYZ("../samples/scene.xyz",pts,nor);
+//    loadXYZ("../samples/scene.xyz",pts,nor);
+    loadXYZ("../samples/Bunny_RealData/cloudXYZ_0.xyz",pts,nor);
 
     for (int i = 0; i < 10; ++i) {
         cout<<pts[i].transpose()<<"\t";
@@ -47,7 +49,9 @@ int main(int argc, char * argv[]){
     //Vector3d tra(0,0,0);//
     Vector3d tra(.01,-0.01,-0.005);//,0.5,0.01);
 
-    Isometry3d P = Translation3d(tra)*Quaterniond(rot);
+    Isometry3d Pclean = Translation3d(tra)*Quaterniond(rot);
+
+    Isometry3d P = addNoise(Pclean,0.1,0.1);
 
 //    for (int i = 0; i < 5; ++i) {
 
@@ -58,6 +62,7 @@ int main(int argc, char * argv[]){
     Isometry3d PtestG2O;
     Isometry3d PtestCeres;
     Isometry3d PtestCeres2;
+    Isometry3d PtestCeres_Sophus;
 
     CPUTimer timer;
 
@@ -66,16 +71,19 @@ int main(int argc, char * argv[]){
         vector<Vector3d> norTraVec = mat2vec(norTra);
         timer.tic();
         Ptest = ICP_Closedform::pointToPlane(pts,ptsTraVec,norTraVec);
-        timer.toc("closed plane");
+        timer.toc("closed");
         timer.tic();
         PtestG2O = ICP_G2O::pointToPlane(pts,ptsTraVec,norTraVec);
-        timer.toc("g2o plane");
+        timer.toc("g2o");
         timer.tic();
-        PtestCeres = ICP_Ceres::pointToPlane(pts,ptsTraVec,norTraVec);
-        timer.toc("ceres plane CeresAngleAxis");
+        PtestCeres = ICP_Ceres::pointToPlane_CeresAngleAxis(pts,ptsTraVec,norTraVec);
+        timer.toc("ceres CeresAngleAxis");
         timer.tic();
         PtestCeres2 = ICP_Ceres::pointToPlane_EigenQuaternion(pts,ptsTraVec,norTraVec);
-        timer.toc("ceres plane EigenQuaternion");
+        timer.toc("ceres EigenQuaternion");
+        timer.tic();
+        PtestCeres_Sophus = ICP_Ceres::pointToPlane_SophusSE3(pts,ptsTraVec,norTraVec,FLAGS_sophusSE3_autodiff);
+        timer.toc("ceres SophusSE3");
     }else{
         timer.tic();
         Ptest = ICP_Closedform::pointToPoint(pts,ptsTraVec);
@@ -89,21 +97,31 @@ int main(int argc, char * argv[]){
         timer.tic();
         PtestCeres2 = ICP_Ceres::pointToPoint_EigenQuaternion(pts,ptsTraVec);
         timer.toc("ceres EigenQuaternion");
+        timer.tic();
+        PtestCeres_Sophus = ICP_Ceres::pointToPoint_SophusSE3(pts,ptsTraVec,FLAGS_sophusSE3_autodiff);
+        timer.toc("ceres SophusSE3");
     }
 
+   timer.printAllTimings();
 
-    cout<<"groundtruth:"<<endl<<P.matrix()<<endl;
-    cout<<"closed-form:"<<endl<<Ptest.matrix()<<endl;
-    cout<<"closed: "<<poseDiff(P,Ptest)<<endl;
+   cout<<endl<<"=====  Accurracy ===="<<endl;
 
-    cout<<"g2o:"<<endl<<PtestG2O.matrix()<<endl;
-    cout<<"g2o: "<<poseDiff(P,PtestG2O)<<endl;
+//    cout<<"groundtruth:"<<endl<<P.matrix()<<endl;
 
-    cout<<"ceres:"<<endl<<PtestCeres.matrix()<<endl;
-    cout<<"ceres: "<<poseDiff(P,PtestCeres)<<endl;
+//    cout<<"ceres:"<<endl<<PtestCeres.matrix()<<endl;
+    cout<<"ceres CeresAngleAxis"<<poseDiff(P,PtestCeres)<<endl;
 
-    cout<<"ceres eigen quaternion:"<<endl<<PtestCeres2.matrix()<<endl;
-    cout<<"ceres eigen quaternion "<<poseDiff(P,PtestCeres2)<<endl;
+//    cout<<"ceres eigen quaternion:"<<endl<<PtestCeres2.matrix()<<endl;
+    cout<<"ceres EigenQuaternion"<<poseDiff(P,PtestCeres2)<<endl;
 
-    timer.printAllTimings();
+//    cout<<"ceres SophusSE3"<<endl<<PtestCeres2.matrix()<<endl;
+    cout<<"ceres SophusSE3    "<<poseDiff(P,PtestCeres2)<<endl;
+
+//    cout<<"closed-form:"<<endl<<Ptest.matrix()<<endl;
+    cout<<"closed form      "<<poseDiff(P,Ptest)<<endl;
+
+//    cout<<"g2o:"<<endl<<PtestG2O.matrix()<<endl;
+    cout<<"g2o              "<<poseDiff(P,PtestG2O)<<endl;
+
+
 }

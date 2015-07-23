@@ -1,3 +1,21 @@
+/** @author Adrian Haarbach
+ *
+ * Example of multiview LM-ICP.
+ * variants:
+ * - point to point
+ * - point to plane
+ * minimizers:
+ * - g2o with SO3 vertices and GICP edges
+ * - ceres with angle axis
+ * - ceres with Eigen Quaternion
+ * - ceres with SophusSE3
+ * options:
+ * - recompute normals using PCA
+ * - dmax cutoff distance
+ * - knn number of clostest frames
+ */
+
+
 #include "Visualize.h"
 #include "common.h"
 #include "gflags/gflags.h"
@@ -10,29 +28,27 @@
 using namespace std;
 
 DEFINE_bool(pointToPlane, true, "use point to plane distance metric");
-DEFINE_bool(sophusSE3,true,"");
+DEFINE_bool(sophusSE3,true,""); DEFINE_bool(sophusSE3_autodiff,false,"");
 DEFINE_bool(angleAxis, false, "");
 
 
 DEFINE_bool(g2o, false, "use g2o");
-DEFINE_double(cutoff,0.05,"cutoff distance for correspondences"); //dmax
-DEFINE_int32(knn,2,"knn"); //dmax
+DEFINE_double(cutoff,0.05,"dmax/cutoff distance after which we prune correspondences"); //dmax
+DEFINE_int32(knn,2,"number of knn nearest neigbhours to build up the graph");
 
 //DEFINE_string(dir,"../samples/dinosaur","dir");
 DEFINE_string(dir,"../samples/Bunny_RealData","dir");
 
-DEFINE_double(sigma,0.02,"rotation variance");
-DEFINE_double(sigmat,0.01,"translation variance");
+DEFINE_double(sigma,0.02,"rotation noise variance");
+DEFINE_double(sigmat,0.01,"translation noise variance");
 
-DEFINE_bool(fake,false,"fake");
+DEFINE_bool(fake,false,"weather to load the first frame repeteadly, useful for testing");
 DEFINE_int32(limit,40,"limit");
 DEFINE_int32(step,2,"step");
 
-DEFINE_bool(recomputeNormals,true,"");
+DEFINE_bool(recomputeNormals,true,"weather to recompute normals using PCA of 10 neighbours");
 
-DEFINE_bool(robust,true,"robust loss function");
-
-//Vector3d centroid;
+DEFINE_bool(robust,true,"robust loss function. Currently uses the SoftL1Loss with scaling parameter set to 1.5*median of point correspondance distances");
 
 static void loadFrames(vector< std::shared_ptr<Frame> >& frames, std::string dir, bool demean){
     vector<string> clouds = getAllTextFilesFromFolder(dir,"cloud");
@@ -119,48 +135,24 @@ int main(int argc, char * argv[]){
 
     CPUTimer timer = CPUTimer();
 
-    cout<<"STAGE 0: preprocessing"<<endl;
-//    timer.tic();
     loadFrames(frames,FLAGS_dir,true);
-//    timer.toc("0_preprocessing");
-
-
-//    frames[1]->pose = frames[0]->pose * Translation3f(0.00,0.00,-0.05);
-//    frames[2]->pose = frames[0]->pose * Translation3f(0.00,0.00,0.05);
-
-//    frames[1]->poseGroundTruth = frames[0]->poseGroundTruth;
-//    frames[2]->poseGroundTruth = frames[0]->poseGroundTruth;
 
     Visualize::setClouds(&frames);
-
-
-//    Visualize::setCentroid(getCentroid(frames[0]->pts));
-//    cout<<centroid.transpose();
-//    Visualize::setCentroid(centroid);
-
-
-//        //frames[0]->updateChildrenAbsolutePoses(frames,0);  // update absolute poses of children of this node in dependecy tree
-
-//        Visualize::spin();
-
-//        //ApproachComponents::computeClosestPointsFake(frames,cutoffGlobal,knn);
 
     frames[0]->fixed=true;
     ApproachComponents::computePoseNeighbours(frames,FLAGS_knn);
 
+    cout<<"press q to start optimization"<<endl;
     Visualize::spin();
-
 
 //    Visualize::getInstance()->selectedFrame=1;
 //    Visualize::getInstance()->selectedOutgoingEdgeIdx=0;
-
 
         for(int i=0; i<20; i++){
 
             timer.tic();
             ApproachComponents::computeClosestPoints(frames,FLAGS_cutoff);
             timer.toc(std::string("closest pts ") + std::to_string(i));
-//            Visualize::spin();
 
 
             timer.tic();
@@ -172,16 +164,11 @@ int main(int argc, char * argv[]){
                 ICP_G2O::g2oOptimizer(frames, FLAGS_pointToPlane);
             }
 
-//            //ApproachComponents::g2oOptimizer(frames);
             timer.toc(std::string("global ") + std::to_string(i));
             cout<<"round: "<<i<<endl;
             Visualize::spinToggle(2);
         }
 
-
-
-
     cout<<"Q (capital q) to quit"<<endl;
     Visualize::spinLast();
-
 }

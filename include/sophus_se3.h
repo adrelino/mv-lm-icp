@@ -62,8 +62,14 @@ public:
 
 //https://groups.google.com/forum/#!topic/ceres-solver/a9JhUIWOn1I
 static ceres::LocalParameterization* getParameterization(bool automaticDiff){
-    if(automaticDiff) return new ceres::AutoDiffLocalParameterization<SophusSE3Plus,Sophus::SE3::num_parameters, Sophus::SE3::DoF>;
-    else return new LocalParameterizationSE3();
+    if(automaticDiff){
+        cout<<"automatic diff sophusSE3 local parameterization"<<endl;
+        return new ceres::AutoDiffLocalParameterization<SophusSE3Plus,Sophus::SE3::num_parameters, Sophus::SE3::DoF>;
+    }
+    else{
+        cout<<"analytic diff sophusSE3 local parameterization"<<endl;
+        return new LocalParameterizationSE3();
+    }
 }
 
 

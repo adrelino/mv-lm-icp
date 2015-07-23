@@ -264,7 +264,7 @@ static std::string poseDiff(Isometry3d P1, Isometry3d P2){
 
 
     stringstream ss;
-    ss<<"diff_tra:"<<diff_tra<<" diff_rot_degrees:"<<diff_rot_degrees<<endl;
+    ss<<"\t diff_tra:"<<diff_tra<<"\t diff_rot_degrees:"<<diff_rot_degrees<<endl;
 
     return ss.str();
 }
