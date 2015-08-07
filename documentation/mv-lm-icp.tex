@@ -1,0 +1,325 @@
+%https://www.sharelatex.com/project/55c47dd369b600da349c3e75
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{mdwlist}
+\usepackage{enumerate}
+\usepackage{paralist}
+\usepackage{array}
+\usepackage{mathtools}
+\usepackage{longtable}
+
+\usepackage[numbers,square]{natbib} %% CUSTOM[square]
+\usepackage[utf8]{inputenc} %% CUSTOM (instead of latin1)
+\usepackage{amsfonts} %% CUSTOM
+\usepackage{amssymb} %% CUSTOM
+\usepackage{tabulary} %% CUSTOM
+\usepackage{multirow} %% CUSTOM
+\usepackage{dcolumn} %% CUSTOM
+\usepackage{cprotect} %% CUSTOM
+\usepackage[hang,bottom]{footmisc} %% 
+\usepackage{subcaption}
+\usepackage{hyperref}
+
+
+\usepackage{multirow}
+
+%% use colors
+\usepackage{color}
+
+%% make fancy math
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{textcomp}
+\usepackage{yhmath} % fr die adots 
+
+
+%http://tex.stackexchange.com/questions/128050/add-equation-name-underneath-equation-number
+\newcommand{\eqname}[1]{\\[-\baselineskip] \tag*{#1}}% Tag equation with name
+\newcommand{\eqnameH}[1]{\\[-0.3\baselineskip] \tag*{#1}}% Tag equation with name
+\newcommand{\eqnameT}[1]{\\[-0.3\baselineskip] \tag*{#1}}% Tag equation with name
+
+
+\newcommand{\itemref}[1]{\item[\ref{#1}]{\makebox[6.5cm][l]{\nameref{#1}}}}
+\newcommand{\clabel}[2]{\caption{#2}\label{#1}}
+\newcommand{\eqlabelname}[2]{\label{eq:#1} \\[-\baselineskip] \tag*{#2} \label{eqname:#1}}
+
+
+\title{Multiview ICP}
+\author{Adrian Haarbach}
+\date{August 2015}
+
+\begin{document}
+
+\maketitle
+The goal of this project was to solve the multiview rigid point cloud registration problem using multiview levenberg-marquardt ICP implemented with Ceres solver. 
+
+\section{ICP}
+The Iterative Closest Points algorithm (ICP) \cite{besl1992method,chen1991object,zhang1994iterative} is a two-step iterative algorithm to rigidly align two point clouds. The following two steps are applied in alternation until convergence:
+\begin{enumerate}
+	\item compute closest point \textbf{correspondences} $\{p_i \rightarrow q_i\}_1^N$ between the two clouds
+	\item update the current \textbf{transformation} estimate $g \in SE(3)$ so that it minimizes a cost function defined on these correspondences.
+\end{enumerate}
+In the following, we concentrate on step 2, meaning the update of the transformation estimate while leaving the correspondences fixed, and extend it to the multiview setting.
+
+\section{Pairwise registration}
+Let $p_i \leftrightarrow q_i ( p_i, q_i\in \mathbb{R}^3) $ be a set of point correspondences. The goal is to find a rigid body motion $g \in SE(3)$ that minimizes the following error:
+\begin{equation}
+	E(g) = \sum_{i=1}^N l(||d(g(p_i),q_i)||^2)
+	\label{eq:icp}
+\end{equation}
+Where $d$ is a CostFunction while $l$ is a LossFunction.
+The solution $g = argmin(E)$ is the relative transformation that aligns the model cloud (the $p_i$) to the data cloud (the $q_i$) in a least squares sense.
+
+\section{Multiview registration}
+In the multiview setting, the roles of model and data cloud are no longer fixed, since one cloud can take on the roles of both of them. Let $C_1, \dots C_M$ be the set of point clouds that are brought to be in alignment.
+%In general, it doesn't make sense to try to align each point cloud with each other, since normally one frame only overlaps with some of its neighbors, but not with a shot taken from the other side of the object.
+%Remember the alignment error from the pairwise setting, 
+To generalize and formalize the notation of which cloud gets registered to which other cloud, we can encode these relations as a directed graph, with the adjacency matrix $A \in \{0,1\}^{M \times M}$, such that $A(h,k) = 1$ if cloud $C_h$ can be registered to cloud $C_k$. Let $g_1, \dots g_M$ be the absolut camera poses of each view in the global reference frame. The alignment error between two clouds $C_h$ and $C_k$ then is:
+\begin{equation}
+	E(g_h, g_k) = A(h,k) \sum_{i=1}^{N_h} l(||d(g_h(p_i^h),g_k(q_i^h))||^2) \label{eq:mvlmicp-pair}
+\end{equation}
+where $\{p_i^h \rightarrow q_i^h\}$ are the $N_h$ closest point correspondences obtained from the clouds $C_h$ and $C_k$.
+The pairwise formulation \eqref{eq:icp} can be obtained by setting $g=g_k * g_h^{-1}$. The overall alignment error, which we want to minimize at this stage, is obtained by summing up the contribution of every pair of overlapping views:
+\begin{equation}
+E(g_1, ..., g_M) = \sum_{h=1}^M \sum_{k=1}^M A(h,k) \sum_{i=1}^{N_h} l(||d(g_h(p_i^h),g_k(q_i^h))||^2) \label{eq:mvlmicp-general}
+\end{equation}
+The solutions $g_1, ..., g_M = argmin(E)$ are the absolute camera poses that align the $M$ clouds in a least squares sense. In contrast to the pairwise registration error \eqref{eq:icp}, which has closed form solutions for the relative transformation $g$ that aligns the two clouds, there are no closed form solutions in the multiview setting. However, rigid point cloud registration is just an instance of Non-linear least squares optimization, which can be solved efficiently using Ceres Solver \footnote{\url{http://ceres-solver.org/nnls_tutorial.html}}.
+
+\subsection{Common ICP Cost Functions}
+\subsubsection{Pairwise}
+The most prominent cost functions one minimizes using closed form solutions in the pairwise setting are:
+
+\begin{align}
+E(g) = \sum_{i=1}^N || R \cdot p_i + t - q_i ||^2 \label{eq:pointToPoint} \eqname{point to point \cite{besl1992method,zhang1994iterative}} \label{eqname:pointToPoint}
+\end{align}
+\begin{gather}
+E(g) = \sum_{i=1}^N || (R \cdot p_i + t - q_i)^T n_{q_i} || ^2 \label{eq:pointToPlane} 
+\eqname{point to plane \cite{chen1991object}} \label{eqname:pointToPlane}
+\end{gather}
+where $R \in SO(3), t \in \mathbb{R}^3$, so $g=(R,t) \in SE(3)$. In these cases, the loss function $l$ is just the identity, and the cost functions $d$ are
+\begin{align}
+	d_{point-point}(g,p,q) & = R \cdot p + t - q  \in \mathbb{R}^3 \label{dist:pointToPoint} \\
+	d_{point-plane}(g,p,q,n_q) & = (R \cdot p + t - q)^T n_q \in \mathbb{R}^1 \label{dist:pointToPlane}
+\end{align}
+Even though there are closed form solutions in the pairwise setting for the above cost functions \cite{eggert1997estimating,low2004linear}, one can also use Ceres to solve the pairwise error \eqref{eq:icp} yielding a relative pose update g. Note that the evaluations of the cost functions, called the residuals, don't have to be in $\mathbb{R}^3$.
+
+\subsubsection{Multiview}
+The multiview setting needs only a slight modification of above cost functions. In the pairwise setting, $d$ depends on the relative pose $g$. In the multiview setting, $d$ depends on the two absolute poses $g_h=(R_h,t_h)$ and $g_k=(R_k,t_k)$. 
+\begin{align}
+	d_{point-point}(g_h,g_k,p,q) & = (R_h \cdot p + t_h ) - (R_k \cdot q + t_k )  \label{dist:pointToPointGlobal} \\
+	d_{point-plane}(g_h,g_k,p,q,n_q) & = d_{point-point}(g_h,g_k,p,q)^T ( R_k \cdot n_q)  \label{dist:pointToPlaneGlobal}
+\end{align}
+
+With this slight modification of the cost functions, we can model \eqref{eq:mvlmicp-general} using Ceres and let it solve for $g_1, ..., g_M$. Notice that in the point-to plane case, the normals of the points in the destination cloud are only rotated, not translated, since they represent directions rather than actual points.
+
+
+\section{Parametrization of rigid body motions}
+In the above, we just wrote $g=(R,t)$ and especially assumed R to be a 3x3 rotation matrix $R \in SO(3)$, which must fulfill $RR^T=I$ and $|R|=1$. If used in an iterative optimization algorithm, one has to optimize over 9 parameters constrained to above orthogonality conditions, while only having 3 degrees of freedom. It is much more efficient to optimize over minimal representations of rotations such as AngleAxis, Unit Quaternions or the Lie Algebra representation.
+
+\subsection{Angle Axis}
+According to Euler's rotation theorem, any rotation in 3D space can be expressed as a single rotation around some axis by a certain angle. The angle-axis (or axis-angle) representation of a rotation parametrizes a rotation by a unit vector $n \in \mathbb{R}^3$ as the axis of the rotation and an angle $\phi$ describing the magnitude of the rotation around the axis.\footnote{\url{https://en.wikipedia.org/wiki/Axis\%E2\%80\%93angle_representation}}
+
+Furthermore, the angle of rotation $\theta$ can be absorbed into the norm of the unit axis vector $n$, so that we only have 3 parameters for the 3 DoF: $\omega = n * \theta$. In the theory of three-dimensional rotation, Rodrigues' rotation formula, named after Olinde Rodrigues, is an efficient algorithm for rotating a vector in space, given an axis and angle of rotation.\footnote{\url{https://en.wikipedia.org/wiki/Rodrigues\%27_rotation_formula}}
+
+Ceres AngleAxisRotatePoint function\footnote{\url{https://github.com/ceres-solver/ceres-solver/blob/master/include/ceres/rotation.h\#L566}} uses Rodrigues rotation formula to directly rotate a point. One first has to recover the angle and the unit axis from the minimal representation, the vector $\omega \in \mathbb{R}^3$, which represents rotational velocity, by $ \phi = ||\omega||,  n=\frac{\omega}{\phi}$.
+
+\begin{equation}
+p_{rot} = p \cos{\phi} + (n \times p) \sin{\phi} + n(n^Tp)(1 - \cos{\phi})
+\end{equation}
+
+Another way is to first convert from the Angle-Axis formulation to a rotation matrix $R$, and then rotate the point by matrix - vector multiplication. This second form of the Rodrigues rotation formula can be derived from the first one.
+\[
+R  = I + \sin{\phi} [n]_x + (1-\cos\phi) 	[n]_x^2
+\]
+This is closely related to the Lie Algebra representation, where we also define the $[.]_x$ cross product matrix operator \eqref{eq:crossmatrix}.
+
+\subsubsection{Cost function}
+With the parametrization of $g$ as $(w,t)$ and $w,t \in \mathbb{R}^3$, we just replace all occurrences of $R \cdot p$ (or q) in the cost functions \eqref{dist:pointToPoint}, \eqref{dist:pointToPlane}, \eqref{dist:pointToPointGlobal}, \eqref{dist:pointToPlaneGlobal} with $p_{rot}$. The translational component is still represented as a 3-dimensional vector.
+
+\subsubsection{Jacobian}
+We rely on Ceres AutoDiffCostFunction functionality to automatically compute the necesarry derivatives of our Cost function parametrized by the angle axis representation and a translation vector.
+
+
+
+\subsection{Unit Quaternions}
+Yet another way to represent rotations are unit quaternions.
+
+A quaternion $q$ is basically the extension of a complex number $c=a+bi, i^2 = -1$ from 2 to 4 dimensions: $q = w + xi + yj + zk, i^2 = j^2 = k^2 = ijk = -1$. Just as complex numbers can be used to represent rotations in $\mathbb{R}^2$ (remember Euler's formula $\mathrm{e}^{\mathrm{i}\,\varphi} = \cos\left(\varphi \right) + \mathrm{i}\,\sin\left( \varphi\right)$ ), quaternions can be used to represent rotations in $\mathbb{R}^3$.
+
+Formally, a quaternion $q \in \mathbb{H}$ may be represented by a vector $q = [q_w,q_x,q_y,q_z]^T = [q_w, q_{x:z}]^T$ together with the definitions:
+\begin{align*}
+	\text{adjoint}: & \quad \bar{q}= [q_w, -q_{x:z}]^T \\
+	\text{norm}:	& \quad ||q|| = \sqrt{q_w^2+q_x^2+q_y^2+q_z^2} \\
+	\text{inverse}:	& \quad q^{-1} = \frac{\bar{q}}{||q||}
+\end{align*}
+
+A unit quaternion is a quaternion with unity norm, $||q||=1$ and can be used to represent the orientation of a rigid body in 3D Euclidean space. Specifically, a unit quaternion can be retrieved from the axis-angle representation, with a rotation $\phi$ about the normalized rotation axis $n, ||n||=1$ via
+\[
+q(\phi,n)=[\cos(0.5 \phi) , n \sin(0.5 \phi)]^T
+\]
+Moreover, there are closed form solutions for converting a unit quaternion into a rotation matrix as well as the other way around which we will use extensively. Since they don't look as neat as the previous formula, we refer to \cite{diebel2006representing} for the details.
+
+Even though Ceres comes with an implementation of unit quaternions in the same file as AngleAxisRotatePoint, we instead used Eigen's quaternions \footnote{\url{http://eigen.tuxfamily.org/dox/classEigen_1_1Quaternion.html}}, which allows for much nicer syntax due to operator overloading. It is important to note that the storage order of the two differ: it is  $[x, y, z, w]$ for eigen quaternions, but  $[w, x, y, z]$ for the ones built into ceres.
+
+\subsubsection{Local Parametrization}
+Unit Quaternions are not a minimal representation, they have 4 components. Nevertheless, the 4th component, typically the scalar part $w$, can be recovered from the other three because the whole 4-vector must have unit norm.
+
+This is why Ceres gives you a 3-dimensional incremental update step $\delta$ that needs to be applied to the current 4-dimensional unit quaternion. This has to be done in a class extending Local Parametrization which must implement the Plus function. For Ceres in-built quaternions, this is implemented in the \href{https://github.com/ceres-solver/ceres-solver/blob/master/internal/ceres/local_parameterization.cc#L157}{QuaternionParameterization::Plus function}. For our Eigen Quaternion, we copied the Plus function but adapted/permuted the indices to the different storage order:
+
+\[
+Plus(q, \delta) = [sin(|\delta|) \delta / |\delta|, cos(|\delta|)] * q
+\]
+with * being the quaternion multiplication operator. Here we assume that the last element of the quaternion vector is the real (cos theta) part ($[x, y, z, w]$ Eigen quaternion storage order).
+
+Since we did not yet implement automatic differentiation of this local parameterization (as for our Lie Algebra using the Sophus Library), one also has to provide the correct Jacobian. For Eigen Quaternions storage order they look as follows:
+
+\begin{equation}
+J = \frac{\partial q}{\partial \delta} =
+\begin{bmatrix}
+ w &  z & -y \\ 
+-z &  w &  x \\ 
+ y & -x &  w \\
+-x & -y & -z \\
+\end{bmatrix} 
+\label{eq:quaternionJacobian}
+\end{equation}
+
+\subsubsection{Cost function}
+With the parametrization of $g$ as $(q,t)$ and $q \in \mathbb{R}^4, t \in \mathbb{R}^3$, we just replace all occurrences of $R \cdot p$ (or q) in the cost functions \eqref{dist:pointToPoint}, \eqref{dist:pointToPlane}, \eqref{dist:pointToPointGlobal}, \eqref{dist:pointToPlaneGlobal} with either a direct quaternion rotation (Eigen storage order $p = [x, y, z, w]$):
+\[
+[p_{rot},0]^T = q \cdot [p,0] \cdot q^{-1} 
+\]
+or by first converting the quaternion to a Rotation matrix R as in \cite{diebel2006representing}.
+The translational component is still represented as a 3-dimensional vector.
+
+\subsubsection{Jacobian}
+In Ceres, it is possible to mix the analytic derivatives for our Local Parametrization as stated above with automatic derivatives for the complete cost function. This drastically lowered the complexity, while still providing decent efficiency, since we were able to use only well tested analytic Jacobians for the Local Parametrization, but did not have to compute analytic Jacobians for the complete cost function.
+
+\subsection{Lie Algebra of Twists}
+Each rigid body transformation matrix T in the Lie group $T \in$ SE(3) has a minimal representation as a twist $\hat\xi$ in its associated Lie algebra $\hat\xi \in se(3)$. Each twist is uniquely defined by its twist coordinates $\xi \in \mathbb{R}^6$:
+\[
+\xi = (\xi_1, \dots, \xi_6)^T = (u_1, u_2, u_3,\omega_1, \omega_2, \omega_3)^T = (u^T \omega^T)^T
+\]
+where $u$ represents the translational velocity and $\omega$ the rotational velocity.
+
+Let us first define the operator $[.]_x$, which is an isomorphism between $\mathbb{R}^3$ and the space $so(3)$ of all 3x3 skew symmetric matrices ($[\omega]_x = -[\omega]_x^T$).
+\begin{equation}
+[.]_x : \mathbb{R}^3 \rightarrow so(3) \subset \mathbb{R}^{3 \times 3} ; 
+[\omega]_x = 
+\begin{bmatrix}
+ 0 & -\omega_3 & \omega_2\\
+ \omega_3 & 0  & -\omega_1\\
+ -\omega_2 & \omega_1 & 0
+\end{bmatrix}
+\label{eq:crossmatrix}
+\end{equation}
+It allows to express the cross product $p \times q$ with $p,q \in \mathbb{R}^3$ as a matrix-vector multiplication: $ p \times q = [p]_x * q$. Furthermore, it allows to convert from twist coordinates to a twist using the hat operator:
+\[
+\wedge : \mathbb{R}^6 \rightarrow se(3) \subset \mathbb{R}^{4 \times 4} ; 
+\hat\xi = 
+\xi^\wedge = 
+\begin{bmatrix}
+ u \\
+ \omega \\
+\end{bmatrix}^\wedge
+=
+\begin{bmatrix}
+ [\omega]_x & u\\
+ 0 & 0\\
+\end{bmatrix}
+\]
+The mapping from the twist in the Lie algebra to the transformation matrix in the Lie group is done by matrix exponentiation:
+\begin{equation}
+\label{eq:lieexp}
+\begin{aligned}
+exp : se(3) &\rightarrow SE(3) \\
+exp(\hat\xi) = %e^{\hat\xi} = 
+exp\left(
+\begin{bmatrix}
+ [\omega]_x & u\\
+ 0 & 0\\
+\end{bmatrix}
+\right)
+&=
+\begin{bmatrix}
+ e^{[\omega]_x} & Vu\\
+ 0 & 1\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+ R & t\\
+ 0 & 1\\
+\end{bmatrix}
+\end{aligned}
+\end{equation}
+We can convert the vector $\omega \in \mathbb{R}^3$, which represents rotational velocity, into an axis angle representation by $ \phi = ||\omega||,  n=\frac{\omega}{\phi}$, to obtain a closed form solution for the Taylor series expansion $e^{[w]_x} = \sum_{i=0}^\infty \frac{[\omega]_x^i}{!i}$ using Rodrigues' rotation formula:
+\[
+e^{[w]_x} = e^{[n]_x\phi} = I + 	sin\phi [n]_x + (1-cos\phi) 	[n]_x^2
+\]
+and similarly for $V$
+\[
+V = I + \frac{1-cos\phi}{\phi}[n]_x + \frac{\phi-sin\phi}{\phi} [n]_x^2
+\]
+To get from twist coordinates $\xi \in \mathbb{R}^6$ to a transformation matrix $T \in SE(3) \subset \mathbb{R}^{4\times4}$ one first has to apply the hat operator $\wedge$ and then the exponential map $exp$. The other direction is possible as well, by first applying the inverse of the exponential map, called the logarithmic map $log$, and then the inverse of the hat operator, called the vee operator $\vee$. For our application however, we only need the forward direction, which is why just summarize the different operators here:
+
+\begin{displaymath}
+\xi \in \mathbb{R}^6 \xrightleftharpoons[\vee (vee)]{\wedge (hat) } \hat{\xi} \in se(3) \xrightleftharpoons[log]{exp} T \in SE(3)
+\end{displaymath}
+
+Every Lie group, such as SO(3) and SE(3), is a group that is also a smooth manifold, with the property that the group operations of multiplication and inversion are smooth maps. They can locally be approximated by their corresponding Lie algebras $so(3)$ and $se(3)$, which form the tangent space of the group at the identity. This allows one to do calculus on the elements of the Lie algebra, such as calculating derivatives, which we will need for numerical minimization.
+
+%The whole reason why we need the Lie algebra of twists $se(3)$ is that in numerical minimization algorithms, we iterate towards the minimum by applying a series of small updates additively to our pose parameterization, but our corresponding Lie group $SE(3)$ only has the multiplication operator. Let us now derive the Jacobian of th
+
+\subsubsection{Cost function}
+With the parametrization of $g$ by its twist coordinates $\xi \in \mathbb{R}^6$, we have a truly minimal representation of both rotation and translation in just one 6 dimensional vector.
+
+In the Lie algebra, a point $p \in \mathbb{R}^3$ is transformed (rotated and translated) to the point $y$ by a twist via \cite{ma2005invitation}[p.32] :
+\[
+\begin{bmatrix}
+ y\\
+ 0\\
+\end{bmatrix}
+=
+\begin{bmatrix}
+ [\omega]_x & u\\
+ 0 & 0\\
+\end{bmatrix}
+\begin{bmatrix}
+ p\\
+ 1\\
+\end{bmatrix}
+=
+\begin{bmatrix} 
+   		   &  -\omega_3 p_2  & +\omega_2 p_3 	& + u_1\\ 
+\;\;\omega_3 p_1 &                &  -\omega_1 p_3 	& + u_2 \\ 
+-\omega_2 p_1 &	+\omega_1 p_2	   &     			& + u_3 \\ 
+               & 			   & 0  &
+\end{bmatrix}
+\Leftrightarrow
+y = w \times p + u
+\]
+
+\subsubsection{Jacobian}
+The Jacobian of the twist $\hat\xi$ is calculated by partial derivates of $y=[y_1,y_2,y_3]^T$ and the twist coordinates $\xi = (u_1, u_2, u_3,\omega_1, \omega_2, \omega_3)^T$ \cite{slavcheva2015unified} :
+\begin{equation}
+J = \frac{\partial y}{\partial \xi} =
+\begin{bmatrix} 
+\frac{\partial{y_1}}{\partial{\xi_1}} & \dots & \dots & \frac{\partial{y_1}}{\partial{\xi_6}}	\\ 
+\vdots 								 &      & & \vdots 							   		\\ 
+\frac{\partial{y_3}}{\partial{\xi_1}} & \dots & \dots & \frac{\partial{y_3}}{\partial{\xi_6}}  
+\end{bmatrix}
+=
+\begin{bmatrix}
+1 & 0 & 0 &   0  & p_3  & -p_2 \\ 
+0 & 1 & 0 & -p_3 &   0  &  p_1 \\ 
+0 & 0 & 1 &  p_2 & -p_1 &  0   \\
+\end{bmatrix} 
+\label{eq:lieJacobian}
+\end{equation}
+\medskip
+
+\bibliographystyle{unsrt}%Used BibTeX style is unsrt
+\bibliography{references}
+
+\end{document}
