@@ -10,28 +10,62 @@ set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build, options a
 #to debug add this when runniing CMAKE: -DCMAKE_BUILD_TYPE=Debug
 #set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 
-
 if(UNIX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif(UNIX)
 
-# Set static build for GLFW
-SET(BUILD_SHED_LIBS OFF)
+### GLFW
+SET(BUILD_SHARED_LIBS OFF) # Set static build for GLFW
 ADD_SUBDIRECTORY(ext/glfw-3.1.1)
+SET(BUILD_SHARED_LIBS ON) # Set shared lib build for the rest
 
-# Set shared lib build for the rest
-SET(BUILD_SHARED_LIBS ON)
+### Sophus
+# use lovegroves version of sophus with ceres extensions!
+#ADD_SUBDIRECTORY(ext/sophus-ceres)
+SET(Sophus_INCLUDE_DIR ext/sophus-ceres)
 
-# Find dependencies
-# SET(EIGEN_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/ext/Eigen-3.1.2")
-SET(EIGEN_INCLUDE_DIR "/usr/local/include/eigen3/")
+### Eigen
+FIND_PACKAGE(Eigen3 REQUIRED)
+IF(NOT EIGEN3_INCLUDE_DIR)
+    if(APPLE)
+        SET(EIGEN3_INCLUDE_DIR /usr/local/include/eigen3/) #'/usr/local is homebrews install prefix
+        # SET(EIGEN_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/ext/Eigen-3.1.2")
+    endif()
+ENDIF()
 
+### CERES
 FIND_PACKAGE(Ceres REQUIRED)
+MESSAGE("ceres found ${Ceres_FOUND} at ${Ceres_DIR}")
+
+### G20
+if(UNIX AND NOT APPLE)
+    if(EXISTS /opt/ros/indigo/include/g2o)  #and ros and ros-indigo-libg2o is installed
+        MESSAGE("using ROS g2o from package ros-indigo-libg2o")
+        link_directories(/opt/ros/indigo/lib/)
+    endif()
+endif()
 set(G2O_LIBRARIES
     g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d #g2o_solver_csparse g2o_csparse_extension
 )
 
+
+
+
+
 include_directories(include/)
+INCLUDE_DIRECTORIES(ext/glfw-3.1.1/include)
+INCLUDE_DIRECTORIES(${Sophus_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${EIGEN_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${CERES_INCLUDE_DIRS})
+INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
+
+
+MESSAGE("Sophus_INCLUDE_DIR ${Sophus_INCLUDE_DIR}")
+MESSAGE("Eigen3_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR}")
+MESSAGE("Ceres_INCLUDE_DIR ${CERES_INCLUDE_DIRS}")
+MESSAGE("Ceres_LIBRARIES ${CERES_LIBRARIES}")
+
+
 
 file(GLOB HEADERS
     include/*.h
@@ -39,28 +73,9 @@ file(GLOB HEADERS
 )
 
 file(GLOB SOURCES src/internal/*.cpp)
-#set(SOURCES
-#    src/algorithms.cpp
-#    src/CPUTimer.cpp
-#)
 
-# define additional include directories and linking targets
-INCLUDE_DIRECTORIES("ext/glfw-3.1.1/include" ${EIGEN_INCLUDE_DIR})
-#INCLUDE_DIRECTORIES(${Sophus_INCLUDE_DIR})
-INCLUDE_DIRECTORIES(${CERES_INCLUDE_DIRS})
-
-
-#set(SOURCES2
-#    ${SOURCES}
-#    src/frame.cpp
-#    src/Visualize.cpp
-#    src/algorithms.cpp
-#    src/CPUTimer.cpp
-#    src/approachcomponents.cpp
-#)
-## define executable
 ADD_EXECUTABLE(multiview src/main_multiview.cpp ${HEADERS} ${SOURCES})
-TARGET_LINK_LIBRARIES(multiview glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} ${CERES_LIBRARIES})
+TARGET_LINK_LIBRARIES(multiview glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} gflags ${CERES_LIBRARIES})
 
 ADD_EXECUTABLE(pairwise src/main_pairwise.cpp ${HEADERS} ${SOURCES})
-TARGET_LINK_LIBRARIES(pairwise glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} ${CERES_LIBRARIES})
+TARGET_LINK_LIBRARIES(pairwise glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} gflags ${CERES_LIBRARIES})

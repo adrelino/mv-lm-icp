@@ -25,7 +25,7 @@ DEFINE_bool(pointToPlane, false, "pointToPlane");
 DEFINE_bool(sophusSE3_autodiff,false,"weather to use automatic or analytic differentiation on local parameterizaiton");
 
 int main(int argc, char * argv[]){
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    google::ParseCommandLineFlags(&argc, &argv, true);
 
     vector<Vector3d> pts,nor;
 //    loadXYZ("../samples/scene.xyz",pts,nor);

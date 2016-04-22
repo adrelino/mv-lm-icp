@@ -128,8 +128,7 @@ static void computeClosestPoints(vector< std::shared_ptr<Frame> >& frames, float
 }//end ns
 
 int main(int argc, char * argv[]){
-
-    gflags::ParseCommandLineFlags(&argc, &argv, true);
+    google::ParseCommandLineFlags(&argc, &argv, true);
 
     vector< std::shared_ptr<Frame> > frames;
 

@@ -7,8 +7,11 @@
 #include "nanoflann.hpp"
 #include <gflags/gflags.h>
 
+#define GL_GLEXT_PROTOTYPES
 #define GLFW_INCLUDE_GLU
-//#include <OpenGL/glu.h>
+#define GLFW_INCLUDE_GLEXT
+//#include <GL/glext.h>
+//#include <GL/glu.h>
 #include <GLFW/glfw3.h>
 
 #include "common.h"
@@ -51,7 +54,6 @@ public:
 
     vector<Vector3d> getNeighbours(int queryIdx, size_t num_results);
     void recomputeNormals();
-
 
     void draw();
 

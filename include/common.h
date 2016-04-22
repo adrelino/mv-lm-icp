@@ -26,6 +26,7 @@ using namespace Eigen;
 
 #include <sophus/so3.hpp>
 #include <random>
+#include <memory>
 
 static std::mt19937 generator;
 
@@ -63,19 +64,19 @@ static Isometry3d addNoise(const Isometry3d& pose, double sigma, double sigmat){
 static bool isPrefixAndSuffix(const char* file, uint16_t filename_length, string prefix, string suffix){
 
 
-   char* startSuffix=strstr(file,suffix.c_str());
+   const char* startSuffix=strstr(file,suffix.c_str());
    bool isSuffix = (startSuffix-file) == filename_length - suffix.length();
    if(!isSuffix) return false;
 
 
    if(prefix[0]=='*'){
         string contains = prefix.substr (1);
-        char* startContains=strstr(file,contains.c_str());
+        const char* startContains=strstr(file,contains.c_str());
         bool isContains = (startContains-file >= 0); //contains
         return isContains;
    }
 
-    char* startPrefix=strstr(file,prefix.c_str());
+    const char* startPrefix=strstr(file,prefix.c_str());
     bool isPrefix = (startPrefix-file == 0);
 
     //cout<<"start: "<<isPrefix<<" end:"<<isSuffix<<endl;
@@ -126,8 +127,14 @@ static vector<string> getAllFilesFromFolder(string dirStr, string prefix, vector
   const string sep = getOSSeparator();
 
   while((entry = (readdir(dir)))) {
-    if (hasPrefixAndSuffixes(entry->d_name,entry->d_namlen,prefix,suffixes)){
       string fileName(entry->d_name);
+    //#ifdef __MACH__
+      uint16_t len = fileName.size(); //entry->d_namlen;
+    //#else
+      //igned short len = entry->d_reclen;
+      cout<<entry->d_name<<"\t"<<len<<endl;
+    //#endif
+    if (hasPrefixAndSuffixes(entry->d_name,len,prefix,suffixes)){
       string fullPath = dirStr + sep + fileName;
       allImages.push_back(fullPath);
     }
