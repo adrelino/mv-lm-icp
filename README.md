@@ -1,10 +1,12 @@
-mv-lm-icp - Multiview Levenberg-Marquardt Iterative Closest Point Algorithm
+mv-lm-icp - Multiview Levenberg-Marquardt ICP
 ================================
+
+The Iterative Closest Point (ICP) Algorithm extended to the multiview setting. Point-to-point and point-to-plane metrics.
 
 A C++ implementation of Section 3.3.2 in:
 * Fantoni, Simone, Umberto Castellani, and Andrea Fusiello. ["Accurate and Automatic Alignment of Range Surfaces."](http://www.diegm.uniud.it/fusiello/papers/3dimpvt12-a.pdf) 3DIMPVT (2012): 73-80.
 
-Using [nanoflann](https://github.com/jlblancoc/nanoflann) for the kd-tree and [Ceres](http://ceres-solver.org/) for the actual minimization. Point-to-point and point-to-plane ICP error metric variants. 
+Using [nanoflann](https://github.com/jlblancoc/nanoflann) for the kd-tree and [Ceres](http://ceres-solver.org/) for the actual minimization.
 
 ##### Rotation parameterization options:
 * Angle axis (Ceres)
@@ -32,7 +34,6 @@ point-to-plane:
 * Pulli, Kari. ["Multiview registration for large data sets."](https://graphics.stanford.edu/papers/pulli-3dim99/3dim99.pdf) 3-D Digital Imaging and Modeling, 1999. Proceedings. Second International Conference on. IEEE, 1999.
 
  
-
 
 ### Dependencies
 cmake, Eigen3, Ceres, g2o
