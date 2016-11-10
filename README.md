@@ -5,6 +5,8 @@ Multi-view Levenberg-Marquardt ICP
 https://github.com/adrelino/mv-lm-icp/blob/master/documentation/mv-lm-icp.pdf
 
 ### Previous work
+* Fitzgibbon, Andrew W. ["Robust registration of 2D and 3D point sets."](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.83.3846&rep=rep1&type=pdf) Image and Vision Computing 21.13 (2003): 1145-1153.
+
 * Brown, Benedict J., and Szymon Rusinkiewicz. ["Global non-rigid alignment of 3-D scans."](http://gfx.cs.princeton.edu/pubs/Brown_2007_GNA/global_tps.pdf) ACM Transactions on Graphics (TOG). Vol. 26. No. 3. ACM, 2007.
 * Pulli, Kari. ["Multiview registration for large data sets."](https://graphics.stanford.edu/papers/pulli-3dim99/3dim99.pdf) 3-D Digital Imaging and Modeling, 1999. Proceedings. Second International Conference on. IEEE, 1999.
 
