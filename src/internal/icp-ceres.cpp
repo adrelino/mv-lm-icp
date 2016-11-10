@@ -16,7 +16,7 @@
 
 #include <ceres/loss_function.h>
 
-#define useLocalParam;
+#define useLocalParam
 
 
 namespace ICP_Ceres {

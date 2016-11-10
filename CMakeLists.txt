@@ -14,6 +14,8 @@ if(UNIX)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 endif(UNIX)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+
 ### GLFW
 SET(BUILD_SHARED_LIBS OFF) # Set static build for GLFW
 ADD_SUBDIRECTORY(ext/glfw-3.1.1)
@@ -26,30 +28,27 @@ SET(Sophus_INCLUDE_DIR ext/sophus-ceres)
 
 ### Eigen
 FIND_PACKAGE(Eigen3 REQUIRED)
-IF(NOT EIGEN3_INCLUDE_DIR)
-    if(APPLE)
-        SET(EIGEN3_INCLUDE_DIR /usr/local/include/eigen3/) #'/usr/local is homebrews install prefix
-        # SET(EIGEN_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/ext/Eigen-3.1.2")
-    endif()
-ENDIF()
+
+### GFLAGS
+FIND_PACKAGE(gflags REQUIRED)
+MESSAGE("gflags found ${Gflags_FOUND} at ${GFLAGS_INCLUDE_DIRS} with namespace: ${GFLAGS_NAMESPACE}")
 
 ### CERES
 FIND_PACKAGE(Ceres REQUIRED)
 MESSAGE("ceres found ${Ceres_FOUND} at ${Ceres_DIR}")
 
-### G20
-if(UNIX AND NOT APPLE)
-    if(EXISTS /opt/ros/indigo/include/g2o)  #and ros and ros-indigo-libg2o is installed
-        MESSAGE("using ROS g2o from package ros-indigo-libg2o")
-        link_directories(/opt/ros/indigo/lib/)
-    endif()
-endif()
+### G2O
+FIND_PACKAGE(G2O REQUIRED)
 set(G2O_LIBRARIES
-    g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d #g2o_solver_csparse g2o_csparse_extension
-)
-
-
-
+    "${G2O_CORE_LIBRARY}" "${G2O_STUFF_LIBRARY}" "${G2O_TYPES_ICP}" "${G2O_TYPES_SLAM3D}"
+) #g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d
+MESSAGE("g2o found: ${G2O_FOUND} at: ${G2O_INCLUDE_DIR} libraries: ${G2O_LIBRARIES}")
+#if(UNIX AND NOT APPLE)
+#    if(EXISTS /opt/ros/indigo/include/g2o)  #and ros and ros-indigo-libg2o is installed
+#        MESSAGE("using ROS g2o from package ros-indigo-libg2o")
+#        link_directories(/opt/ros/indigo/lib/)
+#    endif()
+#endif()
 
 
 include_directories(include/)
@@ -58,7 +57,8 @@ INCLUDE_DIRECTORIES(${Sophus_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${EIGEN_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CERES_INCLUDE_DIRS})
 INCLUDE_DIRECTORIES(${EIGEN3_INCLUDE_DIR})
-
+INCLUDE_DIRECTORIES(${G2O_INCLUDE_DIR})
+INCLUDE_DIRECTORIES(${GFLAGS_INCLUDE_DIRS})
 
 MESSAGE("Sophus_INCLUDE_DIR ${Sophus_INCLUDE_DIR}")
 MESSAGE("Eigen3_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR}")
@@ -75,7 +75,7 @@ file(GLOB HEADERS
 file(GLOB SOURCES src/internal/*.cpp)
 
 ADD_EXECUTABLE(multiview src/main_multiview.cpp ${HEADERS} ${SOURCES})
-TARGET_LINK_LIBRARIES(multiview glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} gflags ${CERES_LIBRARIES})
+TARGET_LINK_LIBRARIES(multiview glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} ${GFLAGS_LIBRARIES} ${CERES_LIBRARIES})
 
 ADD_EXECUTABLE(pairwise src/main_pairwise.cpp ${HEADERS} ${SOURCES})
-TARGET_LINK_LIBRARIES(pairwise glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} gflags ${CERES_LIBRARIES})
+TARGET_LINK_LIBRARIES(pairwise glfw ${OPENGL_glu_LIBRARY} ${GLFW_LIBRARIES} ${G2O_LIBRARIES} ${GFLAGS_LIBRARIES} ${CERES_LIBRARIES})
