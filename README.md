@@ -1,11 +1,10 @@
-# mv-lm-icp
-Multi-view Levenberg-Marquardt Iterative Closest Point Algorithm.
-Point-to-point and point-to-plane variants. 
+mv-lm-icp - Multiview Levenberg-Marquardt Iterative Closest Point Algorithm
+================================
 
 A C++ implementation of Section 3.3.2 in:
 * Fantoni, Simone, Umberto Castellani, and Andrea Fusiello. ["Accurate and Automatic Alignment of Range Surfaces."](http://www.diegm.uniud.it/fusiello/papers/3dimpvt12-a.pdf) 3DIMPVT (2012): 73-80.
 
-Using [nanoflann](https://github.com/jlblancoc/nanoflann) for the kd-tree and [Ceres](http://ceres-solver.org/) for the actual minimization.
+Using [nanoflann](https://github.com/jlblancoc/nanoflann) for the kd-tree and [Ceres](http://ceres-solver.org/) for the actual minimization. Point-to-point and point-to-plane ICP error metric variants. 
 
 ##### Rotation parameterization options:
 * Angle axis (Ceres)
@@ -55,7 +54,7 @@ mkdir build && cd build
 cmake .. && make
 ```
 
-### Running
+### Execution
 
 #### pairwise
 ```sh
@@ -132,8 +131,16 @@ graph adjacency matrix == block structure
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1 0
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1
 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0
+```
+![multiview-init](https://github.com/adrelino/mv-lm-icp/raw/master/samples/multiview-init.png)
+
+
+```
 press q to start optimization
 ```
+
+![multiview-final](https://github.com/adrelino/mv-lm-icp/raw/master/samples/multiview-final.png)
+
 
 
 
