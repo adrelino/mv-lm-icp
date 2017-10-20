@@ -18,7 +18,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 ### GLFW
 SET(BUILD_SHARED_LIBS OFF) # Set static build for GLFW
-ADD_SUBDIRECTORY(ext/glfw-3.1.1)
+ADD_SUBDIRECTORY(ext/glfw)
 SET(BUILD_SHARED_LIBS ON) # Set shared lib build for the rest
 
 ### Sophus
@@ -52,7 +52,7 @@ MESSAGE("g2o found: ${G2O_FOUND} at: ${G2O_INCLUDE_DIR} libraries: ${G2O_LIBRARI
 
 
 include_directories(include/)
-INCLUDE_DIRECTORIES(ext/glfw-3.1.1/include)
+INCLUDE_DIRECTORIES(ext/glfw/include)
 INCLUDE_DIRECTORIES(${Sophus_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${EIGEN_INCLUDE_DIR})
 INCLUDE_DIRECTORIES(${CERES_INCLUDE_DIRS})

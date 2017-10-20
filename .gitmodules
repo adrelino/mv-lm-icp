@@ -4,3 +4,6 @@
 [submodule "ext/sophus-original"]
 	path = ext/sophus-original
 	url = https://github.com/strasdat/Sophus.git
+[submodule "ext/glfw"]
+	path = ext/glfw
+	url = https://github.com/glfw/glfw.git
