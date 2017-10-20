@@ -1,6 +1,6 @@
 #include "icp-ceres.h"
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <math.h>
 #include <unordered_map>
 #include <vector>

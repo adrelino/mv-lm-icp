@@ -10,7 +10,7 @@
 #include <math.h>
 #include <vector>
 #include <thread>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include "frame.h"
 
 
