@@ -68,9 +68,11 @@ Visualize::Visualize()
 
     /* Initialize the library */
     if (!glfwInit()) exit(-1);
-
-    // initialize the window system
-    /* Create a windowed mode window and its OpenGL context */
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
     window = glfwCreateWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "GLFW PointCloud Viewer", NULL, NULL);
     if (!window)
     {
@@ -79,6 +81,14 @@ Visualize::Visualize()
     }
 
     glfwMakeContextCurrent(window);
+    gladLoadGL();
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
+	{
+		std::cout << "Failed to initialize GLAD" << std::endl;
+		exit(-1);
+	}
+	fprintf(stderr, "OpenGL %s\n", glGetString(GL_VERSION));
+
     glfwSwapInterval(1);
 
     int window_width, window_height;
@@ -237,11 +247,11 @@ void Visualize::drawFrame(Frame* m, int i){
         glColor3dv(color.data());
         m->draw();
         glPushMatrix();
-                glMultMatrixd(m->pose.matrix().data());
+               glMultMatrixd(m->pose.matrix().data());
 //                if(keyToggle['d']){ //downsampled
 
 //                    drawPoints(m->pts,color);
-                    if(keyToggle['n']) drawNormals(m,colorNormals);
+                   if(keyToggle['n']) drawNormals(m,colorNormals);
 //                }
             glPopMatrix();
 //        }
@@ -249,7 +259,7 @@ void Visualize::drawFrame(Frame* m, int i){
     //correct
     //drawPoints(m->getPtsInGlobalFrame(),Vector3d(0,1,0),pointSize+1);
 
-                    glPopMatrix();
+                   glPopMatrix();
 }
 
 void Visualize::drawPoints(const vector<Vector3d>& pts, const Vector3d& color, float pointSize){

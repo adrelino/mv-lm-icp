@@ -2,8 +2,7 @@
 #define __PointPairFeatures__Visualize__
 
 #define GLFW_INCLUDE_GLU
-//#include <GL/gl.h>
-//#include <OpenGL/glu.h>
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
