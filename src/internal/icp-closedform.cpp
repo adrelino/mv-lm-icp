@@ -32,7 +32,7 @@ Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vecto
     Matrix<double,6,6> C; C.setZero();
     Matrix<double,6,1> d; d.setZero();
 
-    for(uint i=0;i<src.size();++i){
+    for(int i=0;i<src.size();++i){
         Vector3d cro = src[i].cross(nor[i]);
         C.block<3,3>(0,0) += cro*cro.transpose();
         C.block<3,3>(0,3) += nor[i]*cro.transpose();
