@@ -1,4 +1,5 @@
 #include "frame.h"
+#include "Visualize.h"
 #include <algorithm>
 
 Frame::Frame() : uploaded(false), fixed(false), indexComputed(false) {

@@ -7,13 +7,6 @@
 #include "nanoflann.hpp"
 #include <gflags/gflags.h>
 
-#define GL_GLEXT_PROTOTYPES
-#define GLFW_INCLUDE_GLU
-#define GLFW_INCLUDE_GLEXT
-//#include <GL/glext.h>
-//#include <GL/glu.h>
-#include <GLFW/glfw3.h>
-
 #include "common.h"
 
 //DEFINE_bool(pointToPlane, false, "use point to plane distance metric");
@@ -100,7 +93,7 @@ public:
 
 private:
     //Create a variable to hold the VBO identifier
-    GLuint triangleVBO;
+    unsigned triangleVBO;
 
     bool uploaded;
 

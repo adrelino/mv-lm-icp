@@ -1,33 +1,34 @@
 #include "icp-g2o.h"
 
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include <math.h>
 #include <unordered_map>
 #include <vector>
 
 
+#ifdef WITH_G2O
 #include <g2o/core/sparse_optimizer.h>
 #include <g2o/core/block_solver.h>
 #include <g2o/core/solver.h>
 #include <g2o/core/optimization_algorithm_levenberg.h>
 #include <g2o/solvers/dense/linear_solver_dense.h>
 // #include <g2o/solvers/csparse/linear_solver_csparse.h>
-
 #include <g2o/core/optimization_algorithm_gauss_newton.h>
 #include <g2o/core/optimization_algorithm_dogleg.h>
-
 #include <g2o/types/icp/types_icp.h>
-
 #include <g2o/core/robust_kernel_impl.h>
-
+using namespace g2o;
+#endif
 
 namespace ICP_G2O {
 
-using namespace g2o;
 using namespace Eigen;
 using namespace std;
 
 Isometry3d pointToPoint(vector<Vector3d>&src,vector<Vector3d>&dst){
+    Isometry3d posefinal;
+
+    #ifdef WITH_G2O
     SparseOptimizer optimizer;
     //optimizer.setVerbose(true);
 
@@ -74,12 +75,17 @@ Isometry3d pointToPoint(vector<Vector3d>&src,vector<Vector3d>&dst){
    optimizer.optimize(300);
 
 
-    Isometry3d posefinal= vp1->estimate();//.cast<float>();
+    posefinal= vp1->estimate();//.cast<float>();
+
+    #endif
 
     return posefinal;
 }
 
 Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vector3d> &nor){
+    Isometry3d posefinal;
+
+    #ifdef WITH_G2O
     SparseOptimizer optimizer;
     //optimizer.setVerbose(true);
 
@@ -126,12 +132,15 @@ Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vecto
    optimizer.optimize(300);
 
 
-    Isometry3d posefinal= vp1->estimate();//.cast<float>();
+    posefinal = vp1->estimate();//.cast<float>();
+
+    #endif
 
     return posefinal;
 }
 
 void g2oOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane){
+    #ifdef WITH_G2O
 
 //    g2o::RobustKernelHuber* rk;
 //    if(huberWidth>=0){
@@ -289,6 +298,7 @@ void g2oOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane){
     for (int i = 0; i < frames.size(); ++i) {
         frames[i]->pose= dynamic_cast<g2o::VertexSE3*>(optimizer.vertices().find(i)->second)->estimate();
     }
+    #endif
 
 }
 

@@ -2,15 +2,14 @@
 #define __PointPairFeatures__Visualize__
 
 #define GLFW_INCLUDE_GLU
-//#include <GL/gl.h>
-//#include <OpenGL/glu.h>
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <math.h>
 #include <vector>
 #include <thread>
-#include <eigen3/Eigen/Dense>
+#include <Eigen/Dense>
 #include "frame.h"
 
 
