@@ -39,13 +39,28 @@ point-to-plane:
 cmake, Eigen3, Ceres, g2o
 
 #### OSX El Capitan
+
+The easiest way is by first installing [homebrew](https://brew.sh) package manager:
 ```sh
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
+The science tap has all our dependencies:
+```
 brew tap homebrew/science
 brew install cmake eigen ceres-solver g2o
 ```
+#### Windows (7 / 10)
+
+* **Windows C++ Compiler** and/or IDE: 
+  * [Microsoft Visual Studio IDE](https://www.visualstudio.com/de/downloads/) or just the [MSVC Compiler / Build Tools](http://landinghub.visualstudio.com/visual-cpp-build-tools) 
+  * [Qt Creator IDE](https://www.qt.io/) which already includes the [MinGW](http://www.mingw.org/) or [MinGW 64](http://mingw-w64.org) Compiler. Also see here: https://wiki.qt.io/MinGW-64-bit
+* **cmake**: Download and install CMake for windows, e.g. [cmake-3.11.0-rc3-win64-x64.msi](https://cmake.org/files/v3.11/cmake-3.11.0-rc3-win64-x64.msi) from https://cmake.org/download/.
+* **Eigen3**: Download Eigen Source code (header only) and set the `EIGEN3_ROOT` environment variable to that directory in order to allow CMake to automatically find it. Otherwise manually specify the correct path in cmake-gui
+* **Ceres Solver**: This is the hardes part to get compiled correctly on windows, especially with Sparse Matrix support, which is needed for good performance on our sparse toy problem since only neighbouring frames are connected in the graph. If no sparse solver is installed, use a dense (but slow) solver instead which is e.g. already included with Eigen. Here are the official installation instructions for windows:
+http://ceres-solver.org/installation.html#windows
+
 
 ### Building
-
 ```sh
 git checkout https://github.com/adrelino/mv-lm-icp.git
 cd mv-lm-icp
