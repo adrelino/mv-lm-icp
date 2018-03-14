@@ -9,6 +9,21 @@ using namespace std;
 GLubyte colorEdge[4]={254,122,0,14};
 GLubyte colorEdgeSel[4]={122,254,0,15};
 
+#ifndef gluPerspective
+//https://stackoverflow.com/questions/12943164/replacement-for-gluperspective-with-glfrustrum
+void gluPerspective( GLdouble fovY, GLdouble aspect, GLdouble zNear, GLdouble zFar )
+{
+    const GLdouble pi = 3.1415926535897932384626433832795;
+    GLdouble fW, fH;
+
+    //fH = tan( (fovY / 2) / 180 * pi ) * zNear;
+    fH = tan( fovY / 360 * pi ) * zNear;
+    fW = fH * aspect;
+
+    glFrustum( -fW, fW, -fH, fH, zNear, zFar );
+}
+#endif //gluPerspective
+
 void drawText(string s, Vector3d posMiddle){
     const unsigned char *text = (const unsigned char*) s.c_str();
     glRasterPos3dv(posMiddle.data());
