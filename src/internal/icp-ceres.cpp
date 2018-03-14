@@ -21,58 +21,74 @@
 
 namespace ICP_Ceres {
 
-//http://ceres-solver.org/faqs.html#solving
+/*
+Ceres Solving FAQ extracted from http://ceres-solver.org/solving_faqs.html:
+
+1. For small (a few hundred parameters) or dense problems use DENSE_QR.
+
+2. For general sparse problems (i.e., the Jacobian matrix has a substantial number of zeros) use SPARSE_NORMAL_CHOLESKY.
+This requires that you have SuiteSparse or CXSparse installed.
+
+3. For bundle adjustment problems with up to a hundred or so cameras, use DENSE_SCHUR.
+
+4. For larger bundle adjustment problems with sparse Schur Complement/Reduced camera matrices use SPARSE_SCHUR.
+This requires that you build Ceres with support for SuiteSparse, CXSparse or Eigen’s sparse linear algebra libraries.
+If you do not have access to these libraries for whatever reason, ITERATIVE_SCHUR with SCHUR_JACOBI is an excellent alternative.
+
+5. For large bundle adjustment problems (a few thousand cameras or more) use the ITERATIVE_SCHUR solver.
+There are a number of preconditioner choices here. SCHUR_JACOBI offers an excellent balance of speed and accuracy.
+This is also the recommended option if you are solving medium sized problems for which DENSE_SCHUR is too slow but SuiteSparse is not available.
+Note: If you are solving small to medium sized problems, consider setting Solver::Options::use_explicit_schur_complement to true, it can result in a substantial performance boost.
+If you are not satisfied with SCHUR_JACOBI‘s performance try CLUSTER_JACOBI and CLUSTER_TRIDIAGONAL in that order. They require that you have SuiteSparse installed.
+Both of these preconditioners use a clustering algorithm. Use SINGLE_LINKAGE before CANONICAL_VIEWS.
+*/
 ceres::Solver::Options getOptions(){
     // Set a few options
     ceres::Solver::Options options;
     //options.use_nonmonotonic_steps = true;
-    options.preconditioner_type = ceres::IDENTITY;
+    //options.preconditioner_type = ceres::IDENTITY;
     options.linear_solver_type = ceres::DENSE_QR;
-//    options.max_num_iterations = 100;
+    options.max_num_iterations = 50;
 
-//    options.use_nonmonotonic_steps = true;
 //    options.preconditioner_type = ceres::SCHUR_JACOBI;
 //    options.linear_solver_type = ceres::DENSE_SCHUR;
 //    options.use_explicit_schur_complement=true;
 //    options.max_num_iterations = 100;
 
+    cout << "Ceres Solver getOptions()" << endl;
+    cout << "Ceres preconditioner type: " << options.preconditioner_type << endl;
+    cout << "Ceres linear algebra type: " << options.sparse_linear_algebra_library_type << endl;
+    cout << "Ceres linear solver type: " << options.linear_solver_type << endl;
+
     return options;
 }
-/*
- * For small (a few hundred parameters) or dense problems use DENSE_QR.
 
-For general sparse problems (i.e., the Jacobian matrix has a substantial number of zeros) use SPARSE_NORMAL_CHOLESKY. This requires that you have SuiteSparse or CXSparse installed.
-
-For bundle adjustment problems with up to a hundred or so cameras, use DENSE_SCHUR.
-
-For larger bundle adjustment problems with sparse Schur Complement/Reduced camera matrices use SPARSE_SCHUR. This requires that you build Ceres with support for SuiteSparse, CXSparse or Eigen’s sparse linear algebra libraries.
-
-If you do not have access to these libraries for whatever reason, ITERATIVE_SCHUR with SCHUR_JACOBI is an excellent alternative.
-
-For large bundle adjustment problems (a few thousand cameras or more) use the ITERATIVE_SCHUR solver. There are a number of preconditioner choices here. SCHUR_JACOBI offers an excellent balance of speed and accuracy. This is also the recommended option if you are solving medium sized problems for which DENSE_SCHUR is too slow but SuiteSparse is not available.
-
-Note
-
-If you are solving small to medium sized problems, consider setting Solver::Options::use_explicit_schur_complement to true, it can result in a substantial performance boost.
-If you are not satisfied with SCHUR_JACOBI‘s performance try CLUSTER_JACOBI and CLUSTER_TRIDIAGONAL in that order. They require that you have SuiteSparse installed. Both of these preconditioners use a clustering algorithm. Use SINGLE_LINKAGE before CANONICAL_VIEWS.
-*/
 ceres::Solver::Options getOptionsMedium(){
     // Set a few options
     ceres::Solver::Options options;
-    cout<<"linear algebra: "<<options.sparse_linear_algebra_library_type<<endl;
-    cout<<"linear solver: "<<options.linear_solver_type<<endl;
-//    options.use_nonmonotonic_steps = true;
-    options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
-//    options.preconditioner_type = ceres::SPARSE_SCHUR;
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+
+    #ifdef _WIN32
+        options.sparse_linear_algebra_library_type = ceres::EIGEN_SPARSE;
+        options.linear_solver_type = ceres::ITERATIVE_SCHUR;
+        options.preconditioner_type = ceres::SCHUR_JACOBI;
+    #else
+        //options.sparse_linear_algebra_library_type = ceres::SUITE_SPARSE;
+        options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+    #endif // _WIN32
+
     //If you are solving small to medium sized problems, consider setting Solver::Options::use_explicit_schur_complement to true, it can result in a substantial performance boost.
-//    options.use_explicit_schur_complement=true;
+    options.use_explicit_schur_complement=true;
     options.max_num_iterations = 50;
+
+    cout << "Ceres Solver getOptionsMedium()" << endl;
+    cout << "Ceres preconditioner type: " << options.preconditioner_type << endl;
+    cout << "Ceres linear algebra type: " << options.sparse_linear_algebra_library_type << endl;
+    cout << "Ceres linear solver type: " << options.linear_solver_type << endl;
 
     return options;
 }
 
-void solve(ceres::Problem &problem, bool smallProblem=true){
+void solve(ceres::Problem &problem, bool smallProblem=false){
     ceres::Solver::Summary summary;
     ceres::Solve(smallProblem ? getOptions() : getOptionsMedium(), &problem, &summary);
     if(!smallProblem) std::cout << "Final report:\n" << summary.FullReport();
@@ -296,7 +312,7 @@ void ceresOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane,
         }
     }
 
-    solve(problem,false);
+    solve(problem);
 
     //update camera poses
     for (int i = 0; i < frames.size(); ++i) {
@@ -370,7 +386,7 @@ void ceresOptimizer_ceresAngleAxis(vector< std::shared_ptr<Frame> >& frames, boo
         }
     }
 
-    solve(problem,false);
+    solve(problem);
 
     //update camera poses
     for (int i = 0; i < frames.size(); ++i) {
@@ -450,7 +466,7 @@ void ceresOptimizer_sophusSE3(vector< std::shared_ptr<Frame> >& frames, bool poi
         }
     }
 
-    solve(problem,false);
+    solve(problem);
 
     //update camera poses
     for (int i = 0; i < frames.size(); ++i) {
