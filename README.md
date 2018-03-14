@@ -133,14 +133,14 @@ graph adjacency matrix == block structure
 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0 1
 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0
 ```
-![multiview-init](https://github.com/adrelino/mv-lm-icp/raw/master/samples/multiview-init.png)
+![multiview-init](samples/multiview-init.png)
 
 
 ```
 press q to start optimization
 ```
 
-![multiview-final](https://github.com/adrelino/mv-lm-icp/raw/master/samples/multiview-final.png)
+![multiview-final](samples/multiview-final.png)
 
 
 

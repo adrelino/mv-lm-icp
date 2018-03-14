@@ -60,17 +60,24 @@ FIND_PACKAGE(Ceres REQUIRED)
 MESSAGE("ceres found ${Ceres_FOUND} at ${Ceres_DIR}")
 
 MESSAGE("---------------G2O-------------------")
-FIND_PACKAGE(G2O REQUIRED)
-set(G2O_LIBRARIES
-    "${G2O_CORE_LIBRARY}" "${G2O_STUFF_LIBRARY}" "${G2O_TYPES_ICP}" "${G2O_TYPES_SLAM3D}"
-) #g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d
-MESSAGE("g2o found: ${G2O_FOUND} at: ${G2O_INCLUDE_DIR} libraries: ${G2O_LIBRARIES}")
-#if(UNIX AND NOT APPLE)
-#    if(EXISTS /opt/ros/indigo/include/g2o)  #and ros and ros-indigo-libg2o is installed
-#        MESSAGE("using ROS g2o from package ros-indigo-libg2o")
-#        link_directories(/opt/ros/indigo/lib/)
-#    endif()
-#endif()
+FIND_PACKAGE(G2O)
+
+if(G2O_FOUND)
+    add_definitions(-DWITH_G20)
+    set(G2O_LIBRARIES
+        "${G2O_CORE_LIBRARY}" "${G2O_STUFF_LIBRARY}" "${G2O_TYPES_ICP}" "${G2O_TYPES_SLAM3D}"
+    ) #g2o_core g2o_stuff g2o_types_icp g2o_types_slam3d
+    MESSAGE("g2o found: ${G2O_FOUND} at: ${G2O_INCLUDE_DIR} libraries: ${G2O_LIBRARIES}")
+    #if(UNIX AND NOT APPLE)
+    #    if(EXISTS /opt/ros/indigo/include/g2o)  #and ros and ros-indigo-libg2o is installed
+    #        MESSAGE("using ROS g2o from package ros-indigo-libg2o")
+    #        link_directories(/opt/ros/indigo/lib/)
+    #    endif()
+    #endif()
+else()
+    set(G2O_LIBRARIES "")
+    message("not using g2o")
+endif()
 
 
 include_directories(include/)
