@@ -49,11 +49,10 @@ SET(Sophus_INCLUDE_DIR ext/sophus-ceres)
 
 MESSAGE("---------------Eigen-------------------")
 FIND_PACKAGE(Eigen3 REQUIRED)
-SET(EIGEN_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR})
-
+SET(EIGEN_INCLUDE_DIR ${EIGEN3_INCLUDE_DIR}) #needed for ceres for old version of cmake/FindEigen scripts
 MESSAGE("---------------Gflags-------------------")
-FIND_PACKAGE(gflags REQUIRED)
-MESSAGE("gflags found ${Gflags_FOUND} at ${GFLAGS_INCLUDE_DIRS} with namespace: ${GFLAGS_NAMESPACE}")
+FIND_PACKAGE(Gflags REQUIRED) # package name capitalization, is it really gflags (for windows) vs. Gflags (for linux)
+MESSAGE("gflags found ${gflags_FOUND} at ${gflags_INCLUDE_DIR}")
 
 MESSAGE("---------------Ceres-------------------")
 FIND_PACKAGE(Ceres REQUIRED)
