@@ -1,9 +1,7 @@
 #include "icp-g2o.h"
-
-#include <Eigen/Dense>
 #include <math.h>
 #include <unordered_map>
-#include <vector>
+
 
 
 #ifdef WITH_G2O
@@ -77,6 +75,10 @@ Isometry3d pointToPoint(vector<Vector3d>&src,vector<Vector3d>&dst){
 
     posefinal= vp1->estimate();//.cast<float>();
 
+    #else
+
+    std::cout<<"Application was NOT compiled with g2o support!"<<std::endl;
+
     #endif
 
     return posefinal;
@@ -133,6 +135,11 @@ Isometry3d pointToPlane(vector<Vector3d> &src,vector<Vector3d> &dst,vector<Vecto
 
 
     posefinal = vp1->estimate();//.cast<float>();
+
+    #else
+
+    std::cout<<"Application was NOT compiled with g2o support!"<<std::endl;
+
 
     #endif
 
@@ -298,6 +305,11 @@ void g2oOptimizer(vector< std::shared_ptr<Frame> >& frames, bool pointToPlane){
     for (int i = 0; i < frames.size(); ++i) {
         frames[i]->pose= dynamic_cast<g2o::VertexSE3*>(optimizer.vertices().find(i)->second)->estimate();
     }
+
+    #else
+
+    std::cout<<"Application was NOT compiled with g2o support!"<<std::endl;
+
     #endif
 
 }
