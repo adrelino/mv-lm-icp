@@ -18,7 +18,12 @@ using namespace Eigen;
 #define rad2deg2(r) (180*(r)/M_PI)
 //#define deg2rad(d) (M_PI*(d)/180)
 
-#include <dirent.h>
+#ifdef _WIN32
+  #include "dirent-win.h"
+#else
+  #include <dirent.h>
+#endif
+
 #include <vector>
 #include <algorithm>    // std::any_of
 //#include <array>        // std::array
