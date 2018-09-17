@@ -18,7 +18,7 @@ Using [nanoflann](https://github.com/jlblancoc/nanoflann) for the kd-tree and [C
 * and the closed-form ICP solutions (only pairwise) to [point-to-point](http://graphics.stanford.edu/~smr/ICP/comparison/eggert_comparison_mva97.pdf), [point-to-plane](https://www.comp.nus.edu.sg/~lowkl/publications/lowk_point-to-plane_icp_techrep.pdf)
 
 ### Documentation
-https://github.com/adrelino/mv-lm-icp/blob/master/docs/mv-lm-icp.pdf
+[Multiview ICP](docs/mv-lm-icp.pdf) technical report, August 2015
 
 
 ### Background: ICP Variants
