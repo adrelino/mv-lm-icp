@@ -45,6 +45,30 @@ point-to-plane:
 * optional:
   * [g2o - General Graph Optimization](https://github.com/RainerKuemmerle/g2o)
 
+#### Linux (Debian-based e.g. Ubuntu 18.04)
+
+```sh
+sudo apt install xorg-dev
+sudo apt install cmake libeigen3-dev libceres-dev
+```
+`xorg-dev` is needed for [glfw on linux](http://www.glfw.org/docs/latest/compile_guide.html#compile_deps_x11)
+
+##### optional g2o
+`g2o` is not available in the official Ubuntu repositories, you have two options to install it:
+1. : For long-term releases it can be installed via a ROS installation as [libg2o](http://wiki.ros.org/libg2o). E.g. for Ubuntu 14.04 [install ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu). Then 
+```sh
+sudo apt install ros-indigo-libg2o
+```
+2. : Compile and install yourself:
+```sh
+git clone https://github.com/RainerKuemmerle/g2o.git
+git checkout 20170730_git
+cd g2o && mkdir build && cd build
+cmake -DG2O_BUILD_APPS=OFF -DG2O_BUILD_EXAMPLES=OFF ..
+sudo make install
+```
+
+
 #### Mac OSX (>=El Capitan)
 
 The easiest way is by first installing [homebrew](https://brew.sh) package manager:
@@ -63,33 +87,9 @@ brew install cmake eigen ceres-solver g2o
   * [Qt Creator IDE](https://www.qt.io/) which already includes the [MinGW](http://www.mingw.org/) or [MinGW 64](http://mingw-w64.org) Compiler. Also see here: https://wiki.qt.io/MinGW-64-bit
 * **cmake**: Download and install CMake for windows, e.g. [cmake-3.11.0-rc3-win64-x64.msi](https://cmake.org/files/v3.11/cmake-3.11.0-rc3-win64-x64.msi) from https://cmake.org/download/.
 * **Eigen3**: Download Eigen Source code (header only) and set the `EIGEN3_ROOT` environment variable to that directory in order to allow CMake to automatically find it. Otherwise manually specify the correct path in cmake-gui
-* **Ceres Solver**: This is the hardes part to get compiled correctly on windows, especially with Sparse Matrix support, which is needed for good performance on our sparse toy problem since only neighbouring frames are connected in the graph. If no sparse solver is installed, use a dense (but slow) solver instead which is e.g. already included with Eigen. Here are the official installation instructions for windows:
+* **Ceres Solver**: This is the hardest part to get compiled correctly on windows, especially with Sparse Matrix support, which is needed for good performance on our sparse toy problem since only neighbouring frames are connected in the graph. If no sparse solver is installed, use a dense (but slow) solver instead which is e.g. already included with Eigen. Here are the official installation instructions for windows:
 http://ceres-solver.org/installation.html#windows
 
-#### Debian based Linux (Ubuntu 17.10)
-
-```sh
-sudo apt install xorg-dev
-sudo apt install cmake libeigen3-dev libceres-dev
-```
-
-`xorg-dev` is needed for [glfw on linux](http://www.glfw.org/docs/latest/compile_guide.html#compile_deps_x11)
-
-
-`g2o` is not available in the official Ubuntu repositories, you have to options to install it:
-
-* For long-term releases it can be installed via a ROS installation as [libg2o](http://wiki.ros.org/libg2o). E.g. for Ubuntu 14.04 [install ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu). Then 
-```sh
-sudo apt install ros-indigo-libg2o
-```
-* Compile and install yourself:
-```sh
-git clone https://github.com/RainerKuemmerle/g2o.git
-git checkout 20170730_git
-cd g2o && mkdir build && cd build
-cmake -DG2O_BUILD_APPS=OFF -DG2O_BUILD_EXAMPLES=OFF ..
-sudo make install
-```
 ### Building
 ```sh
 git checkout https://github.com/adrelino/mv-lm-icp.git
