@@ -33,12 +33,19 @@ point-to-plane:
 * Brown, Benedict J., and Szymon Rusinkiewicz. ["Global non-rigid alignment of 3-D scans."](http://gfx.cs.princeton.edu/pubs/Brown_2007_GNA/global_tps.pdf) ACM Transactions on Graphics (TOG). Vol. 26. No. 3. ACM, 2007.
 * Pulli, Kari. ["Multiview registration for large data sets."](https://graphics.stanford.edu/papers/pulli-3dim99/3dim99.pdf) 3-D Digital Imaging and Modeling, 1999. Proceedings. Second International Conference on. IEEE, 1999.
 
- 
+
+## Installation
 
 ### Dependencies
-cmake, Eigen3, Ceres, g2o
 
-#### OSX El Capitan
+* required:
+  * [cmake](https://cmake.org/)
+  * [Eigen3](http://eigen.tuxfamily.org)
+  * [Ceres Solver](http://ceres-solver.org/)
+* optional:
+  * [g2o - General Graph Optimization](https://github.com/RainerKuemmerle/g2o)
+
+#### Mac OSX (>=El Capitan)
 
 The easiest way is by first installing [homebrew](https://brew.sh) package manager:
 ```sh
@@ -59,12 +66,35 @@ brew install cmake eigen ceres-solver g2o
 * **Ceres Solver**: This is the hardes part to get compiled correctly on windows, especially with Sparse Matrix support, which is needed for good performance on our sparse toy problem since only neighbouring frames are connected in the graph. If no sparse solver is installed, use a dense (but slow) solver instead which is e.g. already included with Eigen. Here are the official installation instructions for windows:
 http://ceres-solver.org/installation.html#windows
 
+#### Debian based Linux (Ubuntu 17.10)
 
+```sh
+sudo apt install xorg-dev
+sudo apt install cmake libeigen3-dev libceres-dev
+```
+
+`xorg-dev` is needed for [glfw on linux](http://www.glfw.org/docs/latest/compile_guide.html#compile_deps_x11)
+
+
+`g2o` is not available in the official Ubuntu repositories, you have to options to install it:
+
+* For long-term releases it can be installed via a ROS installation as [libg2o](http://wiki.ros.org/libg2o). E.g. for Ubuntu 14.04 [install ROS Indigo](http://wiki.ros.org/indigo/Installation/Ubuntu). Then 
+```sh
+sudo apt install ros-indigo-libg2o
+```
+* Compile and install yourself:
+```sh
+git clone https://github.com/RainerKuemmerle/g2o.git
+git checkout 20170730_git
+cd g2o && mkdir build && cd build
+cmake -DG2O_BUILD_APPS=OFF -DG2O_BUILD_EXAMPLES=OFF ..
+sudo make install
+```
 ### Building
 ```sh
 git checkout https://github.com/adrelino/mv-lm-icp.git
 cd mv-lm-icp
-git submodule init && git submodule update
+git submodule update --init
 
 mkdir build && cd build
 cmake .. && make
