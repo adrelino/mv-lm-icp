@@ -42,6 +42,7 @@ point-to-plane:
   * [cmake](https://cmake.org/)
   * [Eigen3](http://eigen.tuxfamily.org)
   * [Ceres Solver](http://ceres-solver.org/)
+  * [Gflags](https://github.com/gflags/gflags)
 * optional:
   * [g2o - General Graph Optimization](https://github.com/RainerKuemmerle/g2o)
 
@@ -49,7 +50,7 @@ point-to-plane:
 
 ```sh
 sudo apt install xorg-dev
-sudo apt install cmake libeigen3-dev libceres-dev
+sudo apt install cmake libeigen3-dev libceres-dev libgflags-dev
 ```
 `xorg-dev` is needed for [glfw on linux](http://www.glfw.org/docs/latest/compile_guide.html#compile_deps_x11)
 
